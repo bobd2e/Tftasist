@@ -36,7 +36,7 @@ input{background:#0f1521;border:1px solid #43506a;color:var(--text);border-radiu
 .hidden{display:none!important}.footer{font-size:12px;color:var(--muted);padding:15px 20px;text-align:center}
 @media(max-width:800px){main{grid-template-columns:1fr;padding:10px;gap:10px}.panel{padding:13px}.scroll{max-height:310px}header{padding:13px}.champ{flex-basis:72px;min-width:72px}.champimg{width:72px;height:72px}}
 </style></head><body>
-<header><div><h1>⚔ TFT BUILD ADVISOR</h1><small>Set 18 · 한국어 게임 데이터 기반 · 반응형 베타</small></div><span class="pill" id="sourceTag">Set 18</span></header>
+<header><div><h1>⚔ TFT BUILD ADVISOR</h1><small>Set 18 · 한국어 게임 데이터 기반 · v2.1</small></div><span class="pill" id="sourceTag">Set 18</span></header>
 <main>
 <div class="stack">
 <section class="panel"><div class="row between"><h2>내 필드</h2><button id="clear" type="button">전체 초기화</button></div>
@@ -59,7 +59,7 @@ input{background:#0f1521;border:1px solid #43506a;color:var(--text);border-radiu
 <footer class="footer">Unofficial TFT planning tool · CommunityDragon static assets · Riot Games와 무관한 개인 프로젝트 시제품</footer>
 <script>
 'use strict';
-const URL='/api/data';
+const DATA_URLS=['https://raw.communitydragon.org/latest/cdragon/tft/ko_kr.json','https://raw.communitydragon.org/pbe/cdragon/tft/ko_kr.json'];
 const state={units:[],items:[],champions:[],traits:[],allItems:[],tab:'units',ready:false,raw:null};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -86,10 +86,18 @@ function load(raw,origin){
  $('sourceTag').textContent='데이터 준비 완료';render();
 }
 async function fetchData(){
- status('한국어 TFT 데이터를 불러오는 중…');
- try{const r=await fetch(URL,{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);load(await r.json(),'온라인')}
- catch(e){status('데이터 연결 실패: '+e.message+' · 관리자에게 데이터 갱신을 요청해 주세요.')}
- finally{}
+ status('세트 18 데이터를 불러오는 중…');
+ const errors=[];
+ for(const url of DATA_URLS){
+   try{
+     const r=await fetch(url,{cache:'default'});
+     if(!r.ok)throw Error('HTTP '+r.status+' ('+url+')');
+     const raw=await r.json();
+     load(raw,url.includes('/pbe/')?'PBE':'라이브');
+     return;
+   }catch(e){errors.push(e.message)}
+ }
+ status('데이터 연결 실패 · '+errors.join(' / ')+' · 사이트 관리자에게 알려 주세요.');
 }
 function unit(id){return state.champions.find(x=>x.id===id)}
 function item(id){return state.allItems.find(x=>x.id===id)}
