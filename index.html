@@ -50,6 +50,13 @@ input{background:#0f1521;border:1px solid #43506a;color:var(--text);border-radiu
 </div>
 <div class="stack">
 <div id="status" class="status" role="status">게임 데이터를 준비하고 있어요…</div>
+<details class="panel" id="debugPanel"><summary style="cursor:pointer;font-weight:700">🛠 데이터 연결 · 테스트 도구</summary>
+<p class="note">프로토타입용 도구야. 별도 관리자 로그인은 아직 없어.</p>
+<div class="row"><button id="retry" type="button">다시 연결</button><button id="import" type="button">JSON 파일 불러오기</button><input id="jsonFile" class="hidden" type="file" accept=".json,application/json"></div>
+<p class="note">외부 연결이 실패하면 CommunityDragon에서 내려받은 ko_kr.json을 직접 선택할 수 있어.</p>
+<pre id="diagnostics" style="white-space:pre-wrap;word-break:break-all;font-size:11px;background:#0b1220;padding:10px;border-radius:8px;max-height:180px;overflow:auto">진단 준비 중</pre>
+<button id="copyLog" type="button">진단 로그 복사</button>
+</details>
 <section class="panel"><div class="row between"><h2>추천 조합 · 탐색 로드맵</h2><span class="pill">시너지 기반 탐색</span></div>
 <div class="note" style="margin-bottom:12px">실제 기물·특성으로 후보를 구성하는 <b>규칙 기반 시뮬레이션</b>이야. 메타 승률이나 덱 티어를 반영한 추천은 아직 아니며, 실전 중 직접적인 행동 지시 용도로 설계하지 않았어.</div>
 <div id="results" class="results"><div class="status">데이터를 불러오고 기물을 선택한 뒤 분석하기를 눌러 줘.</div></div>
@@ -59,7 +66,8 @@ input{background:#0f1521;border:1px solid #43506a;color:var(--text);border-radiu
 <footer class="footer">Unofficial TFT planning tool · CommunityDragon static assets · Riot Games와 무관한 개인 프로젝트 시제품</footer>
 <script>
 'use strict';
-const DATA_URLS=['https://raw.communitydragon.org/latest/cdragon/tft/ko_kr.json','https://raw.communitydragon.org/pbe/cdragon/tft/ko_kr.json'];
+const DATA_URLS=['./tft-data.json','https://raw.communitydragon.org/latest/cdragon/tft/ko_kr.json','https://raw.communitydragon.org/pbe/cdragon/tft/ko_kr.json'];
+const logLines=[];function log(x){logLines.push(new Date().toLocaleTimeString('ko-KR')+' '+x);$('diagnostics').textContent=logLines.slice(-35).join('\n')}
 const state={units:[],items:[],champions:[],traits:[],allItems:[],tab:'units',ready:false,raw:null};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -68,12 +76,13 @@ function img(path,cl=''){const src=asset(path);return src?`<img class="${cl}" sr
 function status(s){$('status').textContent=s}
 function normalize(raw){
  const entries=Array.isArray(raw.setData)?raw.setData:[];
- const target=entries.find(x=>Number(x.number)===18)||raw.sets?.['18'];
+ const target=entries.find(x=>Number(x.number)===18 || /set.?18/i.test(x.name||''))||raw.sets?.['18']|| (raw.setNumber===18?raw:null);
+ log('원본 setData '+entries.length+'개 / 세트18 '+(target?'발견':'없음'));
  if(!target||!Array.isArray(target.champions)||!Array.isArray(target.traits))throw Error('세트 18 데이터가 없습니다. 다른 세트 또는 잘못된 파일일 수 있어요.');
  const seen=new Set();
  const champions=target.champions.filter(c=>c&&c.name&&Number.isInteger(c.cost)&&c.cost>=1&&c.cost<=5&&Array.isArray(c.traits)&&c.traits.length&&!c.isSpawn).filter(c=>{let id=c.apiName||c.name;if(seen.has(id))return false;seen.add(id);return true}).map(c=>({id:c.apiName||c.name,name:c.name,cost:c.cost,traits:c.traits,icon:c.squareIcon||c.icon||'',raw:c})).sort((a,b)=>a.cost-b.cost||a.name.localeCompare(b.name,'ko'));
  const traits=target.traits.filter(t=>t&&t.name).map(t=>({name:t.name,effects:t.effects||[],icon:t.icon||''}));
- const allItems=(raw.items||[]).filter(i=>i&&i.name&&i.icon&&!i.isAugment&&!/template|null/i.test(i.apiName||'')).map(i=>({id:i.apiName||String(i.id),name:i.name,icon:i.icon,composition:i.composition||[],tags:i.tags||[]}));
+ const allItems=(Array.isArray(raw.items)?raw.items:[]).filter(i=>i&&i.name&&i.icon&&!i.isAugment&&!/template|null/i.test(i.apiName||'')).map(i=>({id:i.apiName||String(i.id),name:i.name,icon:i.icon,composition:i.composition||[],tags:i.tags||[]}));
  const ids=new Set((target.items||[]).map(String));
  // Set-scoped items when provided; also include common craftable items/components.
  const itemPool=allItems.filter(i=>ids.has(i.id)||ids.has(String(i.id))||i.composition.length||(/component|basic/i).test(i.tags.join(' ')));
@@ -82,23 +91,25 @@ function normalize(raw){
 function load(raw,origin){
  const d=normalize(raw);state.raw=raw;state.champions=d.champions;state.traits=d.traits;state.allItems=d.items;state.ready=true;
  state.units=state.units.filter(id=>d.champions.some(x=>x.id===id));state.items=state.items.filter(id=>d.items.some(x=>x.id===id));
- status(`세트 18 · 기물 ${d.champions.length}종 · 특성 ${d.traits.length}종 · 아이템 ${d.items.length}종`);
+ status(`세트 18 · 기물 ${d.champions.length}종 · 특성 ${d.traits.length}종 · 아이템 ${d.items.length}종`);log('연결 성공: '+origin+' / 기물 '+d.champions.length+' / 아이템 '+d.items.length);
  $('sourceTag').textContent='데이터 준비 완료';render();
 }
 async function fetchData(){
- status('세트 18 데이터를 불러오는 중…');
- const errors=[];
+ status('세트 18 데이터 불러오는 중…');log('데이터 요청 시작 · 현재 주소 '+location.href);
  for(const url of DATA_URLS){
    try{
-     const r=await fetch(url,{cache:'default'});
-     if(!r.ok)throw Error('HTTP '+r.status+' ('+url+')');
+     log('요청: '+url);
+     const r=await fetch(url,{cache:'no-store'});
+     log('응답: HTTP '+r.status+' / '+(r.headers.get('content-type')||'콘텐츠 타입 없음'));
+     if(!r.ok)throw Error('HTTP '+r.status);
      const raw=await r.json();
-     load(raw,url.includes('/pbe/')?'PBE':'라이브');
-     return;
-   }catch(e){errors.push(e.message)}
+     load(raw,url);return;
+   }catch(e){log('실패: '+url+' → '+(e?.message||String(e)))}
  }
- status('데이터 연결 실패 · '+errors.join(' / ')+' · 사이트 관리자에게 알려 주세요.');
+ status('데이터 연결 실패 · 아래 테스트 도구에서 오류 로그를 확인해 줘.');
+ $('debugPanel').open=true;
 }
+
 function unit(id){return state.champions.find(x=>x.id===id)}
 function item(id){return state.allItems.find(x=>x.id===id)}
 function toggle(type,id){const a=state[type];const idx=a.indexOf(id);if(idx>=0)a.splice(idx,1);else a.push(id);render();if(state.ready&&state.units.length)generate()}
@@ -146,5 +157,9 @@ document.addEventListener('click',e=>{const btn=e.target.closest('[data-type][da
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));$('unitPicker').classList.toggle('hidden',state.tab!=='units');$('itemPicker').classList.toggle('hidden',state.tab!=='items');$('search').value='';$('search').placeholder=state.tab==='units'?'기물 이름 또는 특성 검색':'아이템 이름 검색';render()});
 $('search').addEventListener('input',render);$('analyze').onclick=()=>state.ready?generate():status('먼저 데이터를 연결해 주세요.');
 $('clear').onclick=()=>{state.units=[];state.items=[];render();$('results').innerHTML='<div class="status">자원을 선택하고 분석하기를 눌러 줘.</div>'};
+$('retry').onclick=fetchData;
+$('import').onclick=()=>$('jsonFile').click();
+$('jsonFile').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{log('로컬 파일: '+f.name);load(JSON.parse(await f.text()),'직접 가져온 JSON')}catch(err){status('JSON 가져오기 실패: '+err.message);log('가져오기 실패: '+err.message)}};
+$('copyLog').onclick=()=>{const v=$('diagnostics').textContent;if(navigator.clipboard?.writeText){navigator.clipboard.writeText(v).then(()=>log('진단 로그 복사됨')).catch(()=>window.prompt('아래 로그를 복사해 줘',v))}else window.prompt('아래 로그를 복사해 줘',v)};
 fetchData();
 </script></body></html>
