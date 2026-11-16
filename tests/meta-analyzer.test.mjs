@@ -38,3 +38,7 @@ const invalidRows = [
 ];
 assert.equal(clusterCompositions(invalidRows).length, 0);
 assert.equal(clusters[0].confidence, 'low');
+
+const emptyTraits = { ...sample(2), traits_json: '[]' };
+const emptyUnits = { ...sample(2), units_json: '[]' };
+assert.equal(clusterCompositions([emptyTraits, emptyUnits]).length, 0);
