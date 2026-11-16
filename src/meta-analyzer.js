@@ -101,28 +101,39 @@ export function clusterCompositions(participants = [], threshold = 0.55) {
  * This is a feasibility ranking, not a prediction of game outcome.
  */
 export function recommendCompositions(groups, ownedUnitIds, maxResults = 5) {
-  const owned = new Set((Array.isArray(ownedUnitIds) ? ownedUnitIds : [])
-    .filter(id => typeof id === 'string' && id.length > 0));
-  const limit = Math.min(Math.max(Number(maxResults) || 5, 1), 20);
+  const owned = [...new Set((Array.isArray(ownedUnitIds) ? ownedUnitIds : [])
+    .filter(id => typeof id === 'string' && id.length > 0))];
+  const ownedSet = new Set(owned);
+  const limit = Math.min(Math.max(Math.trunc(Number(maxResults) || 5), 1), 20);
   return (Array.isArray(groups) ? groups : [])
     .filter(group => Array.isArray(group.unitIds) && group.unitIds.length > 0)
     .map(group => {
-      const matchedUnits = group.unitIds.filter(id => owned.has(id));
-      const missingUnits = group.unitIds.filter(id => !owned.has(id));
-      const retainedUnits = [...owned].filter(id => group.unitIds.includes(id));
+      const target = [...new Set(group.unitIds)];
+      const targetSet = new Set(target);
+      const matchedUnits = target.filter(id => ownedSet.has(id));
+      const missingUnits = target.filter(id => !ownedSet.has(id));
+      const removeUnits = owned.filter(id => !targetSet.has(id));
+      // One-for-one swaps first, then additional purchases or benching.
+      const swapCount = Math.min(removeUnits.length, missingUnits.length);
       return {
         ...group,
         matchedUnits,
         missingUnits,
-        retainedUnits,
+        removeUnits,
+        retainedUnits: matchedUnits,
         matchCount: matchedUnits.length,
         missingCount: missingUnits.length,
-        coverage: Number((matchedUnits.length / group.unitIds.length).toFixed(3))
+        removeCount: removeUnits.length,
+        swapCount,
+        // Each missing unit requires acquisition; extra current units may be benched.
+        changeCost: missingUnits.length + removeUnits.length,
+        coverage: Number((matchedUnits.length / target.length).toFixed(3))
       };
     })
     .sort((a, b) =>
       b.matchCount - a.matchCount ||
-      a.missingCount - b.missingCount ||
+      a.changeCost - b.changeCost ||
+      b.coverage - a.coverage ||
       b.sampleSize - a.sampleSize ||
       a.averagePlacement - b.averagePlacement
     )
