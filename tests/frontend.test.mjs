@@ -17,4 +17,7 @@ test('frontend inline JavaScript parses and includes observed recommendation wir
   assert.ok(html.includes('missingUnits'));
   assert.ok(html.includes('removeUnits'));
   assert.ok(html.includes('sampledParticipants'));
+  assert.ok(html.includes('version!==analysisVersion'));
+  assert.ok(html.includes('units:selectedUnits'));
+  assert.ok(html.includes('unit(id)?.id||id'));
 });
