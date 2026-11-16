@@ -33,14 +33,18 @@ export function rankBuildPaths(guides, input, limit = 5) {
     const stageCoverage = stage ? matched.length / target.length : 0;
     const itemCoverage = desiredItems.length ? matchedItems.length / desiredItems.length : null;
     const finalCoverage = final.length ? finalMatched.length / final.length : 0;
-    const similarity = Math.round(100 * (0.65 * stageCoverage + 0.20 * (itemCoverage ?? 0) + 0.15 * finalCoverage));
+    const similarity = finalOnly
+      ? Math.round(100 * (0.80 * finalCoverage + 0.20 * (itemCoverage ?? 0)))
+      : Math.round(100 * (0.65 * stageCoverage + 0.20 * (itemCoverage ?? 0) + 0.15 * finalCoverage));
     result.push({
       id: guide.id, name: guide.name, kind: guide.kind || 'level-guide', source: guide.source || null, patch: guide.patch || null,
       level, stageLevel: stage?.level ?? null, stageUnits: stage?.units ?? [], stages,
       finalUnits: guide.finalUnits || stages.at(-1).units, coreItems: guide.items || [],
       matchedUnits: (stage?.units || []).filter(x => owned.includes(key(x))),
       missingUnits: (stage?.units || []).filter(x => !owned.includes(key(x))),
-      matchedItems, similarity, stageCoverage: Number(stageCoverage.toFixed(3)),
+      matchedItems, finalMatchedUnits: (guide.finalUnits || stages.at(-1).units).filter(x => owned.includes(key(x))),
+      finalMissingUnits: (guide.finalUnits || stages.at(-1).units).filter(x => !owned.includes(key(x))),
+      similarity, stageCoverage: Number(stageCoverage.toFixed(3)),
       itemCoverage: itemCoverage === null ? null : Number(itemCoverage.toFixed(3))
     });
   }
