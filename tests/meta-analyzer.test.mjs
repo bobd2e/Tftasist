@@ -15,3 +15,17 @@ assert.equal(clusters[0].averagePlacement, 3);
 assert.equal(clusters[0].top4Rate, 0.667);
 assert.equal(clusters[0].winRate, 0.333);
 console.log('meta-analyzer smoke tests passed');
+
+const unrelated = {
+  placement: 8,
+  units_json: JSON.stringify([
+    { character_id: 'DA_18_Ivern', tier: 2, rarity: 4, itemNames: ['DA_Morellonomicon'] },
+    { character_id: 'DA_18_Diana', tier: 1, rarity: 2, itemNames: [] }
+  ]),
+  traits_json: JSON.stringify([{ name: 'DA_18_Spellweaver', num_units: 4, tier_current: 2, tier_total: 4 }])
+};
+const separate = clusterCompositions([sample(1), unrelated]);
+assert.equal(separate.length, 2);
+assert.deepEqual(separate.map(c => c.sampleSize), [1, 1]);
+assert.equal(clusterCompositions([]).length, 0);
+assert.equal(clusterCompositions([{ placement: 2, units_json: '{broken', traits_json: '[]' }]).length, 0);
