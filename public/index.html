@@ -241,7 +241,7 @@ async function analyzeObserved(){
  if(!state.units.length){$('analyze').disabled=false;$('results').innerHTML='<div class="status">기물을 한 개 이상 선택해 줘.</div>';return}
  const button=$('analyze');button.disabled=true;status('레벨별 빌드업 경로를 확인 중…');
  try {
-   const pathResponse=await fetch('/api/build-paths',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({units:selectedUnits.map(id=>unit(id)?.name||id),items:[...state.items],level:Number($('playerLevel').value)})});
+   const pathResponse=await fetch('/api/build-paths',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({units:selectedUnits.map(id=>unit(id)?.name||id),items:state.items.map(id=>item(id)?.name||id),level:Number($('playerLevel').value)})});
    if(pathResponse.ok){
      const paths=await pathResponse.json();
      if(version!==analysisVersion)return;
