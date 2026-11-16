@@ -47,14 +47,14 @@ export function describeComposition(participant) {
     placement: numeric(participant.placement),
     coreTraits: getCoreTraits(traits),
     coreUnits: getCoreUnits(units),
-    unitIds: [...new Set(units.filter(u => u && typeof u.character_id === 'string' && u.character_id).map(u => u.character_id))].sort()
+    unitIds: [...new Map(units.filter(u => u && typeof u.character_id === 'string' && u.character_id).map(u => [u.character_id.toLowerCase(), u.character_id])).values()].sort()
   };
 }
 
 export function compositionSimilarity(a, b) {
   const overlap = (left, right) => {
-    const x = new Set(left);
-    const y = new Set(right);
+    const x = new Set(left.map(id => id.toLowerCase()));
+    const y = new Set(right.map(id => id.toLowerCase()));
     const union = new Set([...x, ...y]).size;
     return union ? [...x].filter(v => y.has(v)).length / union : 0;
   };
