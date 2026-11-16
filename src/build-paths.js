@@ -31,7 +31,7 @@ export function rankBuildPaths(guides, input, limit = 5) {
     const finalCoverage = final.length ? finalMatched.length / final.length : 0;
     const similarity = Math.round(100 * (0.65 * stageCoverage + 0.20 * (itemCoverage ?? 0) + 0.15 * finalCoverage));
     result.push({
-      id: guide.id, name: guide.name, source: guide.source || null, patch: guide.patch || null,
+      id: guide.id, name: guide.name, kind: guide.kind || 'level-guide', source: guide.source || null, patch: guide.patch || null,
       level, stageLevel: stage.level, stageUnits: stage.units, stages,
       finalUnits: guide.finalUnits || stages.at(-1).units, coreItems: guide.items || [],
       matchedUnits: stage.units.filter(x => owned.includes(key(x))),
