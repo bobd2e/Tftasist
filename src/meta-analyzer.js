@@ -67,7 +67,8 @@ export function clusterCompositions(participants = [], threshold = 0.55) {
   for (const row of participants) {
     let comp;
     try { comp = describeComposition(row); } catch { continue; }
-    if (!Number.isInteger(comp.placement) || comp.placement < 1 || comp.placement > 8 || !comp.unitIds.length) continue;
+    // A final board with no units or no active traits is not a useful meta reference.
+    if (!Number.isInteger(comp.placement) || comp.placement < 1 || comp.placement > 8 || !comp.unitIds.length || !comp.coreTraits.length) continue;
     let best = null;
     let bestScore = threshold;
     for (const cluster of clusters) {
