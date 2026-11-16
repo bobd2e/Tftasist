@@ -3,7 +3,8 @@ const key = x => String(x || '').toLowerCase();
 const unique = xs => [...new Set((Array.isArray(xs) ? xs : []).filter(x => typeof x === 'string' && x).map(key))];
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 export function rankBuildPaths(guides, input, limit = 5) {
-  const owned = unique(input.units), items = unique(input.items);
+  const owned = unique(input.units);
+  const items = (Array.isArray(input.items) ? input.items : []).filter(x => typeof x === 'string' && x).map(key);
   const level = clamp(Number(input.level) || 5, 3, 10);
   const result = [];
   for (const guide of Array.isArray(guides) ? guides : []) {
@@ -16,8 +17,13 @@ export function rankBuildPaths(guides, input, limit = 5) {
     const final = unique(guide.finalUnits || stages.at(-1).units);
     const matched = target.filter(x => owned.includes(x));
     const finalMatched = final.filter(x => owned.includes(x));
-    const desiredItems = unique(guide.items);
-    const matchedItems = items.filter(x => desiredItems.includes(x));
+    const desiredItems = (Array.isArray(guide.items) ? guide.items : []).filter(x => typeof x === 'string' && x).map(key);
+    const remaining = new Map();
+    for (const id of desiredItems) remaining.set(id, (remaining.get(id) || 0) + 1);
+    const matchedItems = [];
+    for (const id of items) {
+      if ((remaining.get(id) || 0) > 0) { matchedItems.push(id); remaining.set(id, remaining.get(id) - 1); }
+    }
     // Scores indicate route similarity only, never estimated win probability.
     const stageCoverage = matched.length / target.length;
     const itemCoverage = desiredItems.length ? matchedItems.length / desiredItems.length : null;
