@@ -12,8 +12,12 @@ export function rankBuildPaths(guides, input, limit = 5) {
     const stages = guide.stages.filter(s => Number.isInteger(s.level) && Array.isArray(s.units) && s.units.length)
       .sort((a, b) => a.level - b.level);
     if (!stages.length) continue;
-    const stage = stages.filter(s => s.level <= level).at(-1) || stages[0];
-    const target = unique(stage.units);
+    const stage = stages.filter(s => s.level <= level && s.units.length <= level).at(-1) || null;
+    // Final-board snapshots are valid goals, never pretend they are playable at a lower level.
+    const finalOnly = guide.kind === 'final-board';
+    if (!stage && !finalOnly) continue;
+    const targetStage = stage || stages.at(-1);
+    const target = unique(targetStage.units);
     const final = unique(guide.finalUnits || stages.at(-1).units);
     const matched = target.filter(x => owned.includes(x));
     const finalMatched = final.filter(x => owned.includes(x));
@@ -26,16 +30,16 @@ export function rankBuildPaths(guides, input, limit = 5) {
       if ((remaining.get(id) || 0) > 0) { matchedItems.push(id); remaining.set(id, remaining.get(id) - 1); }
     }
     // Scores indicate route similarity only, never estimated win probability.
-    const stageCoverage = matched.length / target.length;
+    const stageCoverage = stage ? matched.length / target.length : 0;
     const itemCoverage = desiredItems.length ? matchedItems.length / desiredItems.length : null;
     const finalCoverage = final.length ? finalMatched.length / final.length : 0;
     const similarity = Math.round(100 * (0.65 * stageCoverage + 0.20 * (itemCoverage ?? 0) + 0.15 * finalCoverage));
     result.push({
       id: guide.id, name: guide.name, kind: guide.kind || 'level-guide', source: guide.source || null, patch: guide.patch || null,
-      level, stageLevel: stage.level, stageUnits: stage.units, stages,
+      level, stageLevel: stage?.level ?? null, stageUnits: stage?.units ?? [], stages,
       finalUnits: guide.finalUnits || stages.at(-1).units, coreItems: guide.items || [],
-      matchedUnits: stage.units.filter(x => owned.includes(key(x))),
-      missingUnits: stage.units.filter(x => !owned.includes(key(x))),
+      matchedUnits: (stage?.units || []).filter(x => owned.includes(key(x))),
+      missingUnits: (stage?.units || []).filter(x => !owned.includes(key(x))),
       matchedItems, similarity, stageCoverage: Number(stageCoverage.toFixed(3)),
       itemCoverage: itemCoverage === null ? null : Number(itemCoverage.toFixed(3))
     });
