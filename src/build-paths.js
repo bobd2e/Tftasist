@@ -24,7 +24,7 @@ export function rankBuildPaths(guides, input, limit = 5) {
     if (!matched.length && !finalMatched.length) continue;
     // Per-champion suggestions are shown separately from scoring until the
     // source-backed item data is complete. Preserve duplicate item quantities.
-    const suggestedItems = Object.values(guide.itemByUnit || {}).flat().map(key).filter(Boolean);
+    const suggestedItems = Object.entries(guide.itemByUnit || {}).filter(([champion]) => final.includes(key(champion))).flatMap(([, suggested]) => Array.isArray(suggested) ? suggested.slice(0, 3) : []).map(key).filter(Boolean);
     const ownedItemCounts = new Map();
     for (const id of items) ownedItemCounts.set(id, (ownedItemCounts.get(id) || 0) + 1);
     const availableItemCounts = new Map(ownedItemCounts);
