@@ -1,4 +1,4 @@
-import { clusterCompositions } from './meta-analyzer.js';
+import { clusterCompositions, recommendCompositions } from './meta-analyzer.js';
 
 const json = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 
@@ -16,7 +16,7 @@ async function riotGet(url, apiKey) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (!['/api/meta', '/api/matches', '/api/collect', '/api/compositions'].includes(url.pathname)) {
+    if (!['/api/meta', '/api/matches', '/api/collect', '/api/compositions', '/api/recommend'].includes(url.pathname)) {
       return env.ASSETS.fetch(request);
     }
 
@@ -27,8 +27,28 @@ export default {
         return json({ ok: false, error: 'Unauthorized' }, 401);
       }
       if (!env.tft_meta_db) return json({ ok: false, error: 'D1 binding missing' }, 500);
-    } else if (request.method !== 'GET') {
-      return json({ ok: false, error: 'GET required' }, 405);
+    } else if (url.pathname === '/api/recommend' ? request.method !== 'POST' : request.method !== 'GET') {
+      return json({ ok: false, error: url.pathname === '/api/recommend' ? 'POST required' : 'GET required' }, 405);
+    }
+
+    if (url.pathname === '/api/recommend') {
+      if (!env.tft_meta_db) return json({ ok: false, error: 'D1 binding missing' }, 500);
+      let input;
+      try { input = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body' }, 400); }
+      if (!input || !Array.isArray(input.units) || input.units.length > 30 ||
+          input.units.some(id => typeof id !== 'string' || !/^[A-Za-z0-9_]{1,100}$/.test(id))) {
+        return json({ ok: false, error: 'units must be an array of up to 30 champion IDs' }, 400);
+      }
+      try {
+        const rows = await env.tft_meta_db.prepare(
+          'SELECT p.placement, p.units_json, p.traits_json FROM participants p JOIN matches m ON m.match_id = p.match_id WHERE m.set_number = 18 ORDER BY m.played_at DESC LIMIT 2000'
+        ).all();
+        const participants = rows.results ?? [];
+        const groups = clusterCompositions(participants);
+        return json({ ok: true, setNumber: 18, sampledParticipants: participants.length,
+          recommendations: recommendCompositions(groups, input.units),
+          note: 'Experimental feasibility matches from observed boards; not proven optimal.' });
+      } catch { return json({ ok: false, error: 'Recommendation analysis failed' }, 500); }
     }
 
     // Read-only analytics: use previously collected D1 data; no Riot key required.
