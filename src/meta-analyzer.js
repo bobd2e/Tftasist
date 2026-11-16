@@ -90,7 +90,41 @@ export function clusterCompositions(participants = [], threshold = 0.55) {
     winRate: Number((c.placements.filter(n => n === 1).length / c.count).toFixed(3)),
     coreTraits: c.representative.coreTraits,
     coreUnits: c.representative.coreUnits,
+    unitIds: c.representative.unitIds,
     // Small samples are displayed for inspection, not treated as reliable meta rankings.
     confidence: c.count >= 30 ? 'moderate' : 'low'
   })).sort((a, b) => b.sampleSize - a.sampleSize || a.averagePlacement - b.averagePlacement);
+}
+
+/**
+ * Suggest observed boards that require the fewest additions from a player's roster.
+ * This is a feasibility ranking, not a prediction of game outcome.
+ */
+export function recommendCompositions(groups, ownedUnitIds, maxResults = 5) {
+  const owned = new Set((Array.isArray(ownedUnitIds) ? ownedUnitIds : [])
+    .filter(id => typeof id === 'string' && id.length > 0));
+  const limit = Math.min(Math.max(Number(maxResults) || 5, 1), 20);
+  return (Array.isArray(groups) ? groups : [])
+    .filter(group => Array.isArray(group.unitIds) && group.unitIds.length > 0)
+    .map(group => {
+      const matchedUnits = group.unitIds.filter(id => owned.has(id));
+      const missingUnits = group.unitIds.filter(id => !owned.has(id));
+      const retainedUnits = [...owned].filter(id => group.unitIds.includes(id));
+      return {
+        ...group,
+        matchedUnits,
+        missingUnits,
+        retainedUnits,
+        matchCount: matchedUnits.length,
+        missingCount: missingUnits.length,
+        coverage: Number((matchedUnits.length / group.unitIds.length).toFixed(3))
+      };
+    })
+    .sort((a, b) =>
+      b.matchCount - a.matchCount ||
+      a.missingCount - b.missingCount ||
+      b.sampleSize - a.sampleSize ||
+      a.averagePlacement - b.averagePlacement
+    )
+    .slice(0, limit);
 }
