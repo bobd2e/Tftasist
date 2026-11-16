@@ -175,22 +175,31 @@ function traitCounts(ids){const counts={};for(const id of ids){const c=unit(id);
 function breakpoints(t){const tr=state.traits.find(x=>x.name===t);return (tr?.effects||[]).map(e=>Number(e.minUnits??e.minUnitsRequired??e.min??0)).filter(n=>n>0).sort((a,b)=>a-b)}
 function observedItem(rawId){
  const key=String(rawId||'').toLowerCase();
- return state.allItems.find(x=>x.id.toLowerCase()===key)
-   ||state.allItems.find(x=>String(x.raw?.apiName||'').toLowerCase()===key)
-   ||null;
+ const raw=Array.isArray(state.raw?.items)?state.raw.items:[];
+ const all=[...state.allItems,...raw.map(i=>({id:String(i.apiName||i.id||''),name:i.name,icon:i.icon,composition:i.composition||[],raw:i}))];
+ const aliases=[key,key.replace(/^da_/,'').replace(/^tft_item_/,'')];
+ return all.find(i=>aliases.includes(String(i.id).toLowerCase())||aliases.includes(String(i.raw?.apiName||'').toLowerCase()))
+   ||all.find(i=>{const id=String(i.id).toLowerCase().replace(/^(da_|tft_item_)/,'');return aliases.includes(id)})||null;
 }
 function observedItemPanel(b){
  const cores=(Array.isArray(b.coreUnits)?b.coreUnits:[]).filter(u=>Array.isArray(u.items)&&u.items.length);
  const owned=state.items.map(id=>item(id)).filter(Boolean);
- const normalized=s=>String(s||'').toLowerCase();
- const desired=new Set(cores.flatMap(u=>u.items.map(normalized)));
- const matched=owned.filter(it=>desired.has(normalized(it.id))||desired.has(normalized(it.raw?.apiName)));
- return `<div class="targets"><strong>🎒 아이템 배치 참고 · 수집 경기 사례</strong>
-  <div class="note">아래는 해당 덱 표본 중 대표 경기의 아이템 장착 기록이야. 최적 아이템이나 제작법으로 검증된 결과는 아니야.</div>
-  ${cores.map(u=>`<div class="targetrow" style="align-items:center;margin-top:8px"><b>${esc(unit(u.id)?.name||u.id)}</b>
-   ${u.items.map(id=>{const it=observedItem(id);const have=owned.some(o=>normalized(o.id)===normalized(id)||normalized(o.raw?.apiName)===normalized(id));return `<span class="pill owneditem" title="${esc(id)}">${it?img(it.icon):''}${esc(it?.name||id)}${have?' ✓ 보유':''}</span>`}).join('')}</div>`).join('')||'<div class="note">이 후보에는 확인 가능한 아이템 기록이 없어.</div>'}
-  <div class="sectionlabel">현재 보유 아이템</div><div class="targetrow">${owned.map(it=>`<span class="pill owneditem">${img(it.icon)}${esc(it.name)}</span>`).join('')||'<span class="note">선택한 아이템 없음</span>'}</div>
-  <div class="note">대표 경기 아이템과 직접 일치: ${matched.length}종 · 조합 재료를 통한 제작 가능 여부는 아직 계산하지 않아.</div>
+ const normalized=s=>String(s||'').toLowerCase().replace(/^(da_|tft_item_)/,'');
+ const matched=owned.filter(it=>cores.some(u=>u.items.some(id=>normalized(it.id)===normalized(id))));
+ const baseNames=new Set(['B.F. 대검','곡궁','쇠사슬 조끼','음전자 망토','쓸데없이 큰 지팡이','여신의 눈물','거인의 허리띠','연습용 장갑','뒤집개','프라이팬']);
+ const components=owned.filter(it=>baseNames.has(it.name));
+ const recipes=state.allItems.filter(it=>it.composition?.length===2).filter(it=>{
+   const parts=it.composition.map(x=>String(x).toLowerCase());
+   const inventory=components.map(x=>[String(x.id).toLowerCase(),String(x.raw?.id||'').toLowerCase()]).flat();
+   return parts.every((part,i)=>inventory.includes(part)&& (parts[0]!==parts[1]||components.filter(x=>String(x.id).toLowerCase()===part||String(x.raw?.id||'').toLowerCase()===part).length>=2));
+ });
+ return `<div class="targets"><strong>🎒 챔피언별 아이템 배치 · 실제 경기 참고</strong>
+  <div class="note">대표 경기의 장착 기록이야. 최적 세팅으로 검증된 추천은 아니야.</div>
+  ${cores.map(u=>`<div style="margin-top:10px"><b>${esc(unit(u.id)?.name||u.id)}</b><div class="row" style="margin-top:5px">${u.items.map(id=>{const it=observedItem(id);const have=owned.some(o=>normalized(o.id)===normalized(id));return `<span class="pill owneditem" title="${esc(it?.name||id)}">${it?.icon?img(it.icon):''}${esc(it?.name||'아이템 정보 미확인')}${have?' ✓':''}</span>`}).join('')}</div></div>`).join('')||'<div class="note">이 후보에는 확인 가능한 아이템 기록이 없어.</div>'}
+  <div class="sectionlabel">내 보유 아이템</div><div class="targetrow">${owned.map(it=>`<span class="pill owneditem">${img(it.icon)}${esc(it.name)}</span>`).join('')||'<span class="note">선택한 아이템 없음</span>'}</div>
+  <div class="sectionlabel">지금 제작 가능한 조합 아이템</div>
+  <div class="targetrow">${recipes.map(it=>`<span class="pill owneditem">${img(it.icon)}${esc(it.name)}</span>`).join('')||'<span class="note">현재 선택한 재료로 확인된 조합 없음 (완성 아이템은 재료로 계산하지 않음)</span>'}</div>
+  <div class="note">대표 경기 아이템과 직접 일치: ${matched.length}종 · 아이템 기록과 제작 가능 여부는 별도 참고 정보이며 추천 순위에는 아직 반영되지 않아.</div>
  </div>`;
 }
 function score(ids){const counts=traitCounts(ids);let value=0;for(const [t,n] of Object.entries(counts)){const breaks=breakpoints(t);if(breaks.length){const active=breaks.filter(k=>n>=k);value+=active.length*12+Math.min(n,breaks[0])*2}else if(n>=2)value+=8}value+=ids.filter(id=>state.units.includes(id)).length*9;return value}
