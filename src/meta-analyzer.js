@@ -101,24 +101,36 @@ export function clusterCompositions(participants = [], threshold = 0.55) {
  * Suggest observed boards that require the fewest additions from a player's roster.
  * This is a feasibility ranking, not a prediction of game outcome.
  */
+// Riot match IDs and CommunityDragon API names may differ in letter case.
+// Compare case-insensitively but return original IDs for the client.
+const unitKey = id => id.toLowerCase();
+
 export function recommendCompositions(groups, ownedUnitIds, maxResults = 5) {
-  const owned = [...new Set((Array.isArray(ownedUnitIds) ? ownedUnitIds : [])
-    .filter(id => typeof id === 'string' && id.length > 0))];
-  const ownedSet = new Set(owned);
+  const ownedByKey = new Map();
+  for (const id of Array.isArray(ownedUnitIds) ? ownedUnitIds : []) {
+    if (typeof id === 'string' && id.trim() && !ownedByKey.has(unitKey(id))) {
+      ownedByKey.set(unitKey(id), id);
+    }
+  }
   const limit = Math.min(Math.max(Math.trunc(Number(maxResults) || 5), 1), 20);
   return (Array.isArray(groups) ? groups : [])
     .filter(group => Array.isArray(group.unitIds) && group.unitIds.length > 0)
     .map(group => {
-      const target = [...new Set(group.unitIds)];
-      const targetSet = new Set(target);
-      const matchedUnits = target.filter(id => ownedSet.has(id));
-      const missingUnits = target.filter(id => !ownedSet.has(id));
-      const removeUnits = owned.filter(id => !targetSet.has(id));
-      // One-for-one swaps first, then additional purchases or benching.
+      const targetByKey = new Map();
+      for (const id of group.unitIds) {
+        if (typeof id === 'string' && id && !targetByKey.has(unitKey(id))) {
+          targetByKey.set(unitKey(id), id);
+        }
+      }
+      const target = [...targetByKey.values()];
+      const matchedUnits = target.filter(id => ownedByKey.has(unitKey(id)));
+      const missingUnits = target.filter(id => !ownedByKey.has(unitKey(id)));
+      const removeUnits = [...ownedByKey.entries()]
+        .filter(([key]) => !targetByKey.has(key)).map(([, id]) => id);
       const swapCount = Math.min(removeUnits.length, missingUnits.length);
-      const acquisitionCount = missingUnits.length;
       return {
         ...group,
+        unitIds: target,
         matchedUnits,
         missingUnits,
         removeUnits,
@@ -127,7 +139,7 @@ export function recommendCompositions(groups, ownedUnitIds, maxResults = 5) {
         missingCount: missingUnits.length,
         removeCount: removeUnits.length,
         swapCount,
-        acquisitionCount,
+        acquisitionCount: missingUnits.length,
         // Display-only roster difference; not an estimate of gold or reroll costs.
         changeCost: missingUnits.length + removeUnits.length,
         coverage: Number((matchedUnits.length / target.length).toFixed(3))
