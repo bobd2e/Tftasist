@@ -36,7 +36,7 @@ export default {
     if (url.pathname === '/api/build-paths') {
       let input;
       try { input = await request.json(); } catch { return json({ok:false,error:'Invalid JSON body'},400); }
-      const validIds = xs => Array.isArray(xs) && xs.length <= 100 && xs.every(id => typeof id === 'string' && /^[A-Za-z0-9_]{1,100}$/.test(id));
+      const validIds = xs => Array.isArray(xs) && xs.length <= 100 && xs.every(id => typeof id === 'string' && id.length <= 100 && /^[\p{L}\p{N}_ .:'’\-]+$/u.test(id));
       if (!input || !validIds(input.units) || !validIds(input.items) || !Number.isInteger(input.level) || input.level < 3 || input.level > 10) {
         return json({ok:false,error:'Expected units, items and level (3-10)'},400);
       }
