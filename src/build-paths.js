@@ -22,6 +22,19 @@ export function rankBuildPaths(guides, input, limit = 5) {
     const matched = target.filter(x => owned.includes(x));
     const finalMatched = final.filter(x => owned.includes(x));
     if (!matched.length && !finalMatched.length) continue;
+    // Per-champion suggestions are shown separately from scoring until the
+    // source-backed item data is complete. Preserve duplicate item quantities.
+    const suggestedItems = Object.values(guide.itemByUnit || {}).flat().map(key).filter(Boolean);
+    const ownedItemCounts = new Map();
+    for (const id of items) ownedItemCounts.set(id, (ownedItemCounts.get(id) || 0) + 1);
+    const availableItemCounts = new Map(ownedItemCounts);
+    const matchedSuggestedItems = [];
+    for (const id of suggestedItems) {
+      if ((availableItemCounts.get(id) || 0) > 0) {
+        matchedSuggestedItems.push(id);
+        availableItemCounts.set(id, availableItemCounts.get(id) - 1);
+      }
+    }
     const desiredItems = (Array.isArray(guide.items) ? guide.items : []).filter(x => typeof x === 'string' && x).map(key);
     const remaining = new Map();
     for (const id of desiredItems) remaining.set(id, (remaining.get(id) || 0) + 1);
@@ -42,7 +55,7 @@ export function rankBuildPaths(guides, input, limit = 5) {
       finalUnits: guide.finalUnits || stages.at(-1).units, coreItems: guide.items || [], itemByUnit: guide.itemByUnit || {}, itemSource: guide.itemSource || null,
       matchedUnits: (stage?.units || []).filter(x => owned.includes(key(x))),
       missingUnits: (stage?.units || []).filter(x => !owned.includes(key(x))),
-      matchedItems, finalMatchedUnits: (guide.finalUnits || stages.at(-1).units).filter(x => owned.includes(key(x))),
+      matchedItems, matchedSuggestedItems, suggestedItemCount: suggestedItems.length, finalMatchedUnits: (guide.finalUnits || stages.at(-1).units).filter(x => owned.includes(key(x))),
       finalMissingUnits: (guide.finalUnits || stages.at(-1).units).filter(x => !owned.includes(key(x))),
       similarity, stageCoverage: Number(stageCoverage.toFixed(3)),
       itemCoverage: itemCoverage === null ? null : Number(itemCoverage.toFixed(3))
