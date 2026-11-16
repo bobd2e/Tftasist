@@ -42,11 +42,12 @@ input{background:#0f1521;border:1px solid #43506a;color:var(--text);border-radiu
 <section class="panel"><div class="row between"><h2>내 필드</h2><button id="clear" type="button">전체 초기화</button></div>
 <h3>기물 <span id="ucount">0</span></h3><div id="ownedUnits" class="selectedlist"></div>
 <h3 style="margin-top:13px">아이템 <span id="icount">0</span></h3><div id="ownedItems" class="selectedlist"></div>
+<div class="row" style="margin-top:12px"><label for="playerLevel">현재 레벨</label><select id="playerLevel" style="background:#0f1521;color:var(--text);border:1px solid #43506a;border-radius:8px;padding:8px"><option>3</option><option>4</option><option selected>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></div>
 <button class="primary" id="analyze" style="width:100%;margin-top:14px">분석하기</button></section>
 <section class="panel"><h2>필드자원선택</h2><div class="tabs"><button class="active" data-tab="units">기물 목록</button><button data-tab="items">아이템 목록</button></div>
 <input id="search" placeholder="기물 이름 또는 특성 검색" autocomplete="off">
 <div id="unitPicker" class="scroll"></div><div id="itemCategories" class="itemcategories hidden"><button data-item-category="0" class="active">조합 아이템</button><button data-item-category="1">상징</button><button data-item-category="2">유물</button><button data-item-category="3">찬란한 아이템</button></div><div id="itemPicker" class="scroll hidden"></div>
-<p class="note">기물과 아이템을 누르면 내 필드에 추가돼. 다시 누르면 제거돼. 검색 결과를 누르면 선택돼.</p></section>
+<p class="note">기물은 다시 누르면 제거돼. 아이템은 누를 때마다 1개씩 추가되고 내 필드에서 수량을 조절할 수 있어.</p></section>
 </div>
 <div class="stack">
 <div id="status" class="status" role="status">게임 데이터를 준비하고 있어요…</div>
@@ -57,8 +58,8 @@ input{background:#0f1521;border:1px solid #43506a;color:var(--text);border-radiu
 <pre id="diagnostics" style="white-space:pre-wrap;word-break:break-all;font-size:11px;background:#0b1220;padding:10px;border-radius:8px;max-height:180px;overflow:auto">진단 준비 중</pre>
 <button id="copyLog" type="button">진단 로그 복사</button>
 </details>
-<section class="panel"><div class="row between"><h2>덱 추천 · 수집 경기 기반 우선</h2><span class="pill">시너지 기반 탐색</span></div>
-<div class="note" style="margin-bottom:12px">수집된 경기에서 보유 기물과 가장 비슷한 덱을 먼저 찾아줘. 연결이 실패하면 기존 시너지 탐색을 사용할 수 있어. 표본이 적으므로 승률·티어가 검증된 추천은 아니야.</div>
+<section class="panel"><div class="row between"><h2>메타 빌드업 경로 탐색</h2><span class="pill">시너지 기반 탐색</span></div>
+<div class="note" style="margin-bottom:12px">현재 레벨의 빌드업 경로와 기물·아이템 유사도를 비교하는 기능을 준비 중이야. 검증된 레벨별 공략이 등록되기 전에는 기존 수집 경기 후보를 별도로 보여줘.</div>
 <div id="results" class="results"><div class="status">데이터를 불러오고 기물을 선택한 뒤 분석하기를 눌러 줘.</div></div>
 </section>
 </div>
@@ -226,7 +227,20 @@ async function analyzeObserved(){
  const version=++analysisVersion;
  const selectedUnits=[...state.units];
  if(!state.units.length){$('results').innerHTML='<div class="status">기물을 한 개 이상 선택해 줘.</div>';return}
- const button=$('analyze');button.disabled=true;status('수집 경기 기반 추천을 계산 중…');
+ const button=$('analyze');button.disabled=true;status('레벨별 빌드업 경로를 확인 중…');
+ try {
+   const pathResponse=await fetch('/api/build-paths',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({units:selectedUnits,items:[...state.items],level:Number($('playerLevel').value)})});
+   if(pathResponse.ok){
+     const paths=await pathResponse.json();
+     if(version!==analysisVersion)return;
+     if(paths.ok && paths.recommendations?.length){
+       $('results').innerHTML=paths.recommendations.map((p,i)=>`<article class="result ${i===0?'active':''}"><div class="resulttop"><div><b>${i+1}순위 · ${esc(p.name)}</b><div class="traits">${esc(p.stageLevel)}레벨 경로 · 기물 유사도 ${Math.round(p.stageCoverage*100)}% · 경로 유사도 ${p.similarity}점 (승률 아님)</div></div></div><div class="lineup">${p.stageUnits.map(id=>{const c=unit(id),have=p.matchedUnits.some(x=>x.toLowerCase()===id.toLowerCase());return `<div class="champ"><div class="champimg ${c?'cost'+c.cost:''}">${c?img(c.icon):'?'}<span class="mark ${have?'have':''}">${have?'✓':'+'}</span><div class="name">${esc(c?.name||id)}</div></div></div>`}).join('')}</div><div class="targets"><strong>추가 필요한 기물</strong><div class="targetrow">${p.missingUnits.map(id=>`<span class="pill">${esc(unit(id)?.name||id)}</span>`).join('')||'없음'}</div><div class="note">아이템 일치 ${p.matchedItems.length}종 · 단계별 빌드업</div><details><summary>레벨별 경로 보기</summary>${p.stages.map(st=>`<div class="sectionlabel">${st.level}레벨</div><div class="targetrow">${st.units.map(id=>`<span class="pill">${esc(unit(id)?.name||id)}</span>`).join('')}</div>`).join('')}</details></div></article>`).join('');
+       status('검증된 메타 경로 '+paths.guideCount+'개 기준 · 유사도는 승률이 아니야.');return;
+     }
+   }
+ } catch(e){log('레벨별 경로 API 확인 실패: '+e.message)}
+ status('검증된 레벨별 메타 공략이 아직 없어. 기존 수집 경기 기반 후보를 참고용으로 보여줄게.');
+
  try{
   const response=await fetch('/api/recommend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({units:selectedUnits})});
   if(!response.ok)throw Error('추천 API HTTP '+response.status);
@@ -243,7 +257,7 @@ async function analyzeObserved(){
    }).join('');
    return `<article class="result ${i===0?'active':''}"><div class="resulttop"><div><b>수집 덱 후보 ${i+1}</b><div class="traits">표본 ${Number(b.sampleSize)||0}명 · 평균 ${esc(b.averagePlacement)}등 · 통계 신뢰도 낮음 · 구성 유사도 기준</div></div><span class="pill">보유 ${Number(b.matchCount)||0}/${b.unitIds.length}</span></div><div class="lineup">${lineup}</div>${observedItemPanel(b)}<div class="targets"><strong>추가 필요 · ${missing.length}종</strong><div class="targetrow">${missing.map(id=>`<button data-type="units" data-id="${esc(unit(id)?.id||id)}">＋ ${esc(unit(id)?.name||id)}</button>`).join('')||'<span class="check">추가 필요 없음</span>'}</div><div class="note">교체·제외 후보: ${removed.map(id=>esc(unit(id)?.name||id)).join(', ')||'없음'} · 확보 필요 ${missing.length}종 · 골드·리롤 비용 미반영</div></div></article>`;
   }).join('');
-  status('수집 참가자 '+data.sampledParticipants+'명 · 분석 가능 '+(data.analyzedParticipants??data.sampledParticipants)+'명 기준 · 실험적 추천 · 검증된 메타 순위가 아니야.');
+  status('레벨별 공략 미등록 · 기존 수집 경기 참고 후보 · 수집 참가자 '+data.sampledParticipants+'명 · 분석 가능 '+(data.analyzedParticipants??data.sampledParticipants)+'명 기준 · 실험적 추천 · 검증된 메타 순위가 아니야.');
  }catch(error){if(version!==analysisVersion)return;log('추천 API 실패: '+error.message);status('추천 API 연결 실패 · 시너지 기반 탐색으로 전환했어.');generate()}
  finally{if(version===analysisVersion)button.disabled=false}
 }
