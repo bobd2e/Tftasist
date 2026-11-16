@@ -56,3 +56,11 @@ test('recommendations expose swap and bench candidates without duplicate ownersh
   assert.equal(match.acquisitionCount, 1);
   assert.equal(match.matchCount, 1);
 });
+
+test('Riot and CommunityDragon champion IDs match despite case differences', () => {
+  const groups = clusterCompositions(rows);
+  const [match] = recommendCompositions(groups, ['da_18_a', 'DA_18_C']);
+  assert.equal(match.matchCount, 1);
+  assert.deepEqual(match.missingUnits, ['DA_18_B']);
+  assert.deepEqual(match.removeUnits, ['DA_18_C']);
+});
