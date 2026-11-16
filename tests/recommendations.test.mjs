@@ -45,3 +45,13 @@ test('GET /api/recommend is rejected', async () => {
   const response = await worker.fetch(new Request('https://example.com/api/recommend'), {});
   assert.equal(response.status, 405);
 });
+
+test('recommendations expose swap and bench candidates without duplicate ownership', () => {
+  const groups = clusterCompositions(rows);
+  const [match] = recommendCompositions(groups, ['DA_18_A', 'DA_18_C', 'DA_18_C']);
+  assert.deepEqual(match.removeUnits, ['DA_18_C']);
+  assert.deepEqual(match.missingUnits, ['DA_18_B']);
+  assert.equal(match.swapCount, 1);
+  assert.equal(match.changeCost, 2);
+  assert.equal(match.matchCount, 1);
+});
