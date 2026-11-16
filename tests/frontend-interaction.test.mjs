@@ -113,3 +113,20 @@ test('a second analysis request supersedes the first response', async () => {
   assert.match(element('status').textContent, /수집 경기 2명/);
   assert.doesNotMatch(element('status').textContent, /수집 경기 1명/);
 });
+
+test('reloading champion data invalidates an in-flight recommendation', async () => {
+  let resolve;
+  const { context, element } = setup(() => new Promise(r => { resolve = r; }));
+  const pending = runInNewContext('analyzeObserved()', context);
+  runInNewContext(`load({setNumber:18,champions:[
+    {apiName:'da_18_a',name:'A',cost:1,traits:['TestTrait']},
+    {apiName:'DA_18_B',name:'B',cost:2,traits:['TestTrait']}
+  ],traits:[{name:'TestTrait'}],items:[]},'test fixture')`, context);
+  resolve({ ok: true, json: async () => ({ ok: true, sampledParticipants: 1,
+    recommendations: [{ unitIds: ['DA_18_A'], matchedUnits: ['DA_18_A'], missingUnits: [],
+      removeUnits: [], sampleSize: 1 }] }) });
+  await pending;
+  assert.match(element('results').innerHTML, /데이터가 갱신됐어/);
+  assert.equal(element('analyze').disabled, false);
+  assert.equal(runInNewContext('state.units[0]', context), 'da_18_a');
+});
