@@ -1,5 +1,5 @@
 // Level-aware route matching. Guides must be curated/permissioned; no inferred build paths.
-const key = x => String(x || '').toLowerCase();
+const key = x => String(x || '').toLowerCase().replace(/^(?:da_18_|tft18_|tft_18_|da_)/, '').replace(/[^a-z0-9]/g, '');
 const unique = xs => [...new Set((Array.isArray(xs) ? xs : []).filter(x => typeof x === 'string' && x).map(key))];
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 export function rankBuildPaths(guides, input, limit = 5) {
