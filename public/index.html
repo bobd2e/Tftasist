@@ -241,6 +241,23 @@ async function analyzeObserved(){
  // Allocate each owned item copy to at most one suggested slot, per board.
  // Resolve recipe component IDs against the live CommunityDragon item catalog.
  const recipeFor=name=>{
+  // Korean standard item recipes are a stable fallback when CommunityDragon
+  // composition IDs use a different representation from the displayed pool.
+  const standard={
+   '무한의 대검':['B.F. 대검','연습용 장갑'],
+   '가고일 돌갑옷':['쇠사슬 조끼','음전자 망토'],
+   '구인수의 격노검':['곡궁','쓸데없이 큰 지팡이'],
+   '밤의 끝자락':['B.F. 대검','쇠사슬 조끼'],
+   '거인의 결의':['곡궁','쇠사슬 조끼'],
+   '워모그의 갑옷':['거인의 허리띠','거인의 허리띠'],
+   '정령의 형상':['음전자 망토','거인의 허리띠'],
+   '최후의 속삭임':['곡궁','연습용 장갑'],
+   '스테락의 도전':['B.F. 대검','거인의 허리띠'],
+   '쇼진의 창':['B.F. 대검','여신의 눈물'],
+   '거인 학살자':['B.F. 대검','곡궁']
+  };
+  const known=standard[name];
+  if(known)return known;
   const target=state.allItems.find(x=>guideKey(x.name)===guideKey(name));
   if(!target||!Array.isArray(target.composition)||target.composition.length!==2)return null;
   const names=target.composition.map(id=>{
