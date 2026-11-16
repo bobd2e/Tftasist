@@ -226,7 +226,7 @@ let analysisVersion=0;
 async function analyzeObserved(){
  const version=++analysisVersion;
  const selectedUnits=[...state.units];
- if(!state.units.length){$('results').innerHTML='<div class="status">기물을 한 개 이상 선택해 줘.</div>';return}
+ if(!state.units.length){$('analyze').disabled=false;$('results').innerHTML='<div class="status">기물을 한 개 이상 선택해 줘.</div>';return}
  const button=$('analyze');button.disabled=true;status('레벨별 빌드업 경로를 확인 중…');
  try {
    const pathResponse=await fetch('/api/build-paths',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({units:selectedUnits,items:[...state.items],level:Number($('playerLevel').value)})});
@@ -235,7 +235,7 @@ async function analyzeObserved(){
      if(version!==analysisVersion)return;
      if(paths.ok && paths.recommendations?.length){
        $('results').innerHTML=paths.recommendations.map((p,i)=>`<article class="result ${i===0?'active':''}"><div class="resulttop"><div><b>${i+1}순위 · ${esc(p.name)}</b><div class="traits">${esc(p.stageLevel)}레벨 경로 · 기물 유사도 ${Math.round(p.stageCoverage*100)}% · 경로 유사도 ${p.similarity}점 (승률 아님)</div></div></div><div class="lineup">${p.stageUnits.map(id=>{const c=unit(id),have=p.matchedUnits.some(x=>x.toLowerCase()===id.toLowerCase());return `<div class="champ"><div class="champimg ${c?'cost'+c.cost:''}">${c?img(c.icon):'?'}<span class="mark ${have?'have':''}">${have?'✓':'+'}</span><div class="name">${esc(c?.name||id)}</div></div></div>`}).join('')}</div><div class="targets"><strong>추가 필요한 기물</strong><div class="targetrow">${p.missingUnits.map(id=>`<span class="pill">${esc(unit(id)?.name||id)}</span>`).join('')||'없음'}</div><div class="note">아이템 일치 ${p.matchedItems.length}종 · 단계별 빌드업</div><details><summary>레벨별 경로 보기</summary>${p.stages.map(st=>`<div class="sectionlabel">${st.level}레벨</div><div class="targetrow">${st.units.map(id=>`<span class="pill">${esc(unit(id)?.name||id)}</span>`).join('')}</div>`).join('')}</details></div></article>`).join('');
-       status('검증된 메타 경로 '+paths.guideCount+'개 기준 · 유사도는 승률이 아니야.');return;
+       status('검증된 메타 경로 '+paths.guideCount+'개 기준 · 유사도는 승률이 아니야.');button.disabled=false;return;
      }
    }
  } catch(e){log('레벨별 경로 API 확인 실패: '+e.message)}
