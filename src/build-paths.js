@@ -17,6 +17,7 @@ export function rankBuildPaths(guides, input, limit = 5) {
     const final = unique(guide.finalUnits || stages.at(-1).units);
     const matched = target.filter(x => owned.includes(x));
     const finalMatched = final.filter(x => owned.includes(x));
+    if (!matched.length && !finalMatched.length) continue;
     const desiredItems = (Array.isArray(guide.items) ? guide.items : []).filter(x => typeof x === 'string' && x).map(key);
     const remaining = new Map();
     for (const id of desiredItems) remaining.set(id, (remaining.get(id) || 0) + 1);
