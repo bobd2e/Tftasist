@@ -44,7 +44,7 @@ test('clicking analyze displays observed recommendations and normalized add butt
       }]
     }) };
   });
-  await runInNewContext('analyzeObserved()', context);
+  await element('analyze').onclick();
   assert.match(element('results').innerHTML, /수집 덱 후보 1/);
   assert.match(element('results').innerHTML, /data-id="DA_18_B"/);
   assert.match(element('status').textContent, /수집 경기 3명/);
@@ -78,4 +78,20 @@ test('empty selection never calls the recommendation API', async () => {
   await runInNewContext('analyzeObserved()', context);
   assert.equal(calls, 0);
   assert.match(element('results').innerHTML, /기물을 한 개 이상 선택/);
+});
+
+test('valid API response with no observed compositions falls back to synergy search', async () => {
+  const { context, element } = setup(async () => ({
+    ok: true, json: async () => ({ ok: true, sampledParticipants: 0, recommendations: [] })
+  }));
+  await element('analyze').onclick();
+  assert.match(element('results').innerHTML, /후보 1/);
+  assert.equal(element('analyze').disabled, false);
+});
+
+test('invalid API response falls back rather than showing a blank screen', async () => {
+  const { element } = setup(async () => ({ ok: true, json: async () => ({ ok: false }) }));
+  await element('analyze').onclick();
+  assert.match(element('results').innerHTML, /후보 1/);
+  assert.equal(element('analyze').disabled, false);
 });
