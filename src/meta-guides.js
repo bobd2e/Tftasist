@@ -1,3 +1,14 @@
-// No curated Set 18 guides are enabled until each champion ID and stage is verified
-// against the current playable champion roster. Never publish unverified routes.
-export const metaGuides = [];
+// Korean-name Set 18 final-board snapshots, source: SeeMeta, patch 18.6 (2026-11-16).
+// These are FINAL boards, NOT invented level-by-level build-up guides.
+const source = 'https://seemeta.com/ko/tft/set-18';
+const finalBoard = (id,name,units) => ({
+  id,name,source,patch:'18.6',kind:'final-board',items:[],
+  finalUnits:units,stages:[{level:9,units}]
+});
+export const metaGuides = [
+  finalBoard('sivir-ashe','전쟁기계 시비르 & 애쉬',['시비르','애쉬','마오카이','라칸','바이','아무무','타릭','케넨']),
+  finalBoard('master-yi','적응가 마스터 이',['마스터 이','렝가','니달리','요릭','심술두꺼비','돌거북','바이','코그모','세트']),
+  finalBoard('draven','전쟁기계 드레이븐',['드레이븐','장로 드래곤','마오카이','파수꾼','아무무','이즈리얼','타릭','케넨','아이번']),
+  finalBoard('brambleback','협곡야수 덩굴정령',['덩굴정령','장로 드래곤','돌거북','불타는 묘목','조약돌','어스름늑대','바위 게','파수꾼','타릭']),
+  finalBoard('aphelios','나무정령 아펠리오스',['아펠리오스','이즈리얼','릴리아','자야','오른','르블랑','알리스타','다이애나','헤카림'])
+];
