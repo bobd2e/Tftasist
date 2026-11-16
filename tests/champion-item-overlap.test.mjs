@@ -13,3 +13,10 @@ test('extra owned copies cannot exceed suggested item quantity',()=>{
  const [r]=rankBuildPaths(guides,{units:['돌거북'],items:['도적의 장갑','도적의 장갑','도적의 장갑'],level:7});
  assert.deepEqual(r.matchedSuggestedItems,['도적의장갑']);
 });
+
+test('ignore item suggestions for champions outside final board and cap to three slots',()=>{
+ const guide={id:'cap',name:'캡',kind:'final-board',finalUnits:['돌거북'],stages:[{level:9,units:['돌거북']}],itemByUnit:{'돌거북':['가고일 돌갑옷','워모그의 갑옷','정령의 형상','도적의 장갑'],'다른 기물':['곡궁']}};
+ const [r]=rankBuildPaths([guide],{units:['돌거북'],items:['곡궁','도적의 장갑','가고일 돌갑옷'],level:7});
+ assert.equal(r.suggestedItemCount,3);
+ assert.equal(r.matchedSuggestedItems.length,1);
+});
