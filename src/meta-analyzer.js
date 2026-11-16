@@ -42,11 +42,12 @@ export function describeComposition(participant) {
     ? JSON.parse(participant.units_json) : (participant.units ?? []);
   const traits = typeof participant.traits_json === 'string'
     ? JSON.parse(participant.traits_json) : (participant.traits ?? []);
+  if (!Array.isArray(units) || !Array.isArray(traits)) throw new Error('Invalid board arrays');
   return {
     placement: numeric(participant.placement),
     coreTraits: getCoreTraits(traits),
     coreUnits: getCoreUnits(units),
-    unitIds: [...new Set(units.map(u => u.character_id).filter(Boolean))].sort()
+    unitIds: [...new Set(units.filter(u => u && typeof u.character_id === 'string' && u.character_id).map(u => u.character_id))].sort()
   };
 }
 
