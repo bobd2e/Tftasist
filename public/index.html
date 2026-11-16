@@ -151,7 +151,7 @@ async function fetchData(){
  $('debugPanel').open=true;
 }
 
-function unit(id){return state.champions.find(x=>x.id===id)}
+function unit(id){return state.champions.find(x=>x.id.toLowerCase()===String(id).toLowerCase())}
 function item(id){return state.allItems.find(x=>x.id===id)}
 function toggle(type,id){const a=state[type];const idx=a.indexOf(id);if(idx>=0)a.splice(idx,1);else a.push(id);render();$('results').innerHTML='<div class="status">선택이 변경됐어. 분석하기를 눌러 줘.</div>'; }
 function render(){
@@ -181,9 +181,9 @@ async function analyzeObserved(){
   const cards=data.recommendations.filter(x=>Array.isArray(x.unitIds)&&x.unitIds.length);
   if(!cards.length){status('분석 가능한 수집 덱이 없어 시너지 탐색으로 전환했어.');generate();return}
   $('results').innerHTML=cards.map((b,i)=>{
-   const matched=new Set(b.matchedUnits||[]), missing=b.missingUnits||[], removed=b.removeUnits||[];
+   const matched=new Set((b.matchedUnits||[]).map(id=>id.toLowerCase())), missing=b.missingUnits||[], removed=b.removeUnits||[];
    const lineup=b.unitIds.map(id=>{
-    const champ=unit(id),have=matched.has(id);
+    const champ=unit(id),have=matched.has(id.toLowerCase());
     return `<div class="champ"><div class="champimg ${champ?'cost'+champ.cost:''}">${champ?img(champ.icon):'<span>?</span>'}<span class="mark ${have?'have':''}">${have?'✓':'+'}</span><div class="name">${esc(champ?.name||id)}</div></div></div>`;
    }).join('');
    return `<article class="result ${i===0?'active':''}"><div class="resulttop"><div><b>수집 덱 후보 ${i+1}</b><div class="traits">표본 ${Number(b.sampleSize)||0}명 · 평균 ${esc(b.averagePlacement)}등 · 통계 신뢰도 낮음 · 구성 유사도 기준</div></div><span class="pill">보유 ${Number(b.matchCount)||0}/${b.unitIds.length}</span></div><div class="lineup">${lineup}</div><div class="targets"><strong>추가 필요 · ${missing.length}종</strong><div class="targetrow">${missing.map(id=>`<button data-type="units" data-id="${esc(id)}">＋ ${esc(unit(id)?.name||id)}</button>`).join('')||'<span class="check">추가 필요 없음</span>'}</div><div class="note">교체·제외 후보: ${removed.map(id=>esc(unit(id)?.name||id)).join(', ')||'없음'} · 확보 필요 ${missing.length}종 · 골드·리롤 비용 미반영</div></div></article>`;
