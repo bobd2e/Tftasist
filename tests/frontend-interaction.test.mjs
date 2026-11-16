@@ -47,6 +47,7 @@ test('clicking analyze displays observed recommendations and normalized add butt
   await element('analyze').onclick();
   assert.match(element('results').innerHTML, /수집 덱 후보 1/);
   assert.match(element('results').innerHTML, /data-id="DA_18_B"/);
+  assert.match(element('results').innerHTML, /보유 1\\/2/);
   assert.match(element('status').textContent, /수집 경기 3명/);
   assert.equal(element('analyze').disabled, false);
 });
@@ -94,4 +95,21 @@ test('invalid API response falls back rather than showing a blank screen', async
   await element('analyze').onclick();
   assert.match(element('results').innerHTML, /후보 1/);
   assert.equal(element('analyze').disabled, false);
+});
+
+test('a second analysis request supersedes the first response', async () => {
+  const resolvers = [];
+  const { context, element } = setup(() => new Promise(resolve => resolvers.push(resolve)));
+  const first = runInNewContext('analyzeObserved()', context);
+  const second = runInNewContext('analyzeObserved()', context);
+  resolvers[1]({ ok: true, json: async () => ({ ok: true, sampledParticipants: 2,
+    recommendations: [{ unitIds: ['DA_18_B'], matchedUnits: [], missingUnits: ['DA_18_B'],
+      removeUnits: ['DA_18_A'], sampleSize: 2, averagePlacement: 4, matchCount: 0 }] }) });
+  await second;
+  resolvers[0]({ ok: true, json: async () => ({ ok: true, sampledParticipants: 1,
+    recommendations: [{ unitIds: ['DA_18_A'], matchedUnits: ['DA_18_A'], missingUnits: [],
+      removeUnits: [], sampleSize: 1, averagePlacement: 1, matchCount: 1 }] }) });
+  await first;
+  assert.match(element('status').textContent, /수집 경기 2명/);
+  assert.doesNotMatch(element('status').textContent, /수집 경기 1명/);
 });
