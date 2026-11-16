@@ -218,7 +218,7 @@ function observedItemPanel(b){
   <div class="sectionlabel">내 보유 아이템</div><div class="targetrow">${owned.map(it=>`<span class="pill owneditem">${img(it.icon)}${esc(it.name)}</span>`).join('')||'<span class="note">선택한 아이템 없음</span>'}</div>
   <div class="sectionlabel">지금 제작 가능한 조합 아이템</div>
   <div class="targetrow">${recipes.map(it=>`<span class="pill owneditem">${img(it.icon)}${esc(it.name)}</span>`).join('')||'<span class="note">현재 선택한 재료로 확인된 조합 없음 (완성 아이템은 재료로 계산하지 않음)</span>'}</div>
-  <div class="note">대표 경기 아이템과 직접 일치: ${matched.length}종 · 아이템 기록과 제작 가능 여부는 별도 참고 정보이며 추천 순위에는 아직 반영되지 않아.</div>
+  <div class="note">대표 경기 아이템과 직접 일치: ${matched.length}종 · 아이템 직접 일치 수량은 기물 일치가 같은 후보의 순위 비교에 반영돼. 제작 가능 여부는 아직 순위에 미반영이야.</div>
  </div>`;
 }
 function score(ids){const counts=traitCounts(ids);let value=0;for(const [t,n] of Object.entries(counts)){const breaks=breakpoints(t);if(breaks.length){const active=breaks.filter(k=>n>=k);value+=active.length*12+Math.min(n,breaks[0])*2}else if(n>=2)value+=8}value+=ids.filter(id=>state.units.includes(id)).length*9;return value}
@@ -242,7 +242,7 @@ async function analyzeObserved(){
  status('검증된 레벨별 메타 공략이 아직 없어. 기존 수집 경기 기반 후보를 참고용으로 보여줄게.');
 
  try{
-  const response=await fetch('/api/recommend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({units:selectedUnits})});
+  const response=await fetch('/api/recommend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({units:selectedUnits,items:[...state.items]})});
   if(!response.ok)throw Error('추천 API HTTP '+response.status);
   const data=await response.json();
   if(version!==analysisVersion)return;
@@ -255,7 +255,7 @@ async function analyzeObserved(){
     const champ=unit(id),have=matched.has(id.toLowerCase());
     return `<div class="champ"><div class="champimg ${champ?'cost'+champ.cost:''}">${champ?img(champ.icon):'<span>?</span>'}<span class="mark ${have?'have':''}">${have?'✓':'+'}</span><div class="name">${esc(champ?.name||id)}</div></div></div>`;
    }).join('');
-   return `<article class="result ${i===0?'active':''}"><div class="resulttop"><div><b>수집 덱 후보 ${i+1}</b><div class="traits">표본 ${Number(b.sampleSize)||0}명 · 평균 ${esc(b.averagePlacement)}등 · 통계 신뢰도 낮음 · 구성 유사도 기준</div></div><span class="pill">보유 ${Number(b.matchCount)||0}/${b.unitIds.length}</span></div><div class="lineup">${lineup}</div>${observedItemPanel(b)}<div class="targets"><strong>추가 필요 · ${missing.length}종</strong><div class="targetrow">${missing.map(id=>`<button data-type="units" data-id="${esc(unit(id)?.id||id)}">＋ ${esc(unit(id)?.name||id)}</button>`).join('')||'<span class="check">추가 필요 없음</span>'}</div><div class="note">교체·제외 후보: ${removed.map(id=>esc(unit(id)?.name||id)).join(', ')||'없음'} · 확보 필요 ${missing.length}종 · 골드·리롤 비용 미반영</div></div></article>`;
+   return `<article class="result ${i===0?'active':''}"><div class="resulttop"><div><b>수집 덱 후보 ${i+1}</b><div class="traits">아이템 일치 ${Number(b.itemMatchCount)||0}/${Number(b.observedItemCount)||0} · 표본 ${Number(b.sampleSize)||0}명 · 평균 ${esc(b.averagePlacement)}등 · 통계 신뢰도 낮음 · 구성 유사도 기준</div></div><span class="pill">보유 ${Number(b.matchCount)||0}/${b.unitIds.length}</span></div><div class="lineup">${lineup}</div>${observedItemPanel(b)}<div class="targets"><strong>추가 필요 · ${missing.length}종</strong><div class="targetrow">${missing.map(id=>`<button data-type="units" data-id="${esc(unit(id)?.id||id)}">＋ ${esc(unit(id)?.name||id)}</button>`).join('')||'<span class="check">추가 필요 없음</span>'}</div><div class="note">교체·제외 후보: ${removed.map(id=>esc(unit(id)?.name||id)).join(', ')||'없음'} · 확보 필요 ${missing.length}종 · 골드·리롤 비용 미반영</div></div></article>`;
   }).join('');
   status('레벨별 공략 미등록 · 기존 수집 경기 참고 후보 · 수집 참가자 '+data.sampledParticipants+'명 · 분석 가능 '+(data.analyzedParticipants??data.sampledParticipants)+'명 기준 · 실험적 추천 · 검증된 메타 순위가 아니야.');
  }catch(error){if(version!==analysisVersion)return;log('추천 API 실패: '+error.message);status('추천 API 연결 실패 · 시너지 기반 탐색으로 전환했어.');generate()}
