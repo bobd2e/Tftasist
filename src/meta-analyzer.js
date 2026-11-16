@@ -67,7 +67,7 @@ export function clusterCompositions(participants = [], threshold = 0.55) {
   for (const row of participants) {
     let comp;
     try { comp = describeComposition(row); } catch { continue; }
-    if (!comp.placement || !comp.unitIds.length) continue;
+    if (!Number.isInteger(comp.placement) || comp.placement < 1 || comp.placement > 8 || !comp.unitIds.length) continue;
     let best = null;
     let bestScore = threshold;
     for (const cluster of clusters) {
@@ -88,6 +88,8 @@ export function clusterCompositions(participants = [], threshold = 0.55) {
     top4Rate: Number((c.placements.filter(n => n <= 4).length / c.count).toFixed(3)),
     winRate: Number((c.placements.filter(n => n === 1).length / c.count).toFixed(3)),
     coreTraits: c.representative.coreTraits,
-    coreUnits: c.representative.coreUnits
+    coreUnits: c.representative.coreUnits,
+    // Small samples are displayed for inspection, not treated as reliable meta rankings.
+    confidence: c.count >= 30 ? 'moderate' : 'low'
   })).sort((a, b) => b.sampleSize - a.sampleSize || a.averagePlacement - b.averagePlacement);
 }
