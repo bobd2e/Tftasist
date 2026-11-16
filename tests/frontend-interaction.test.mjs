@@ -22,7 +22,9 @@ function setup(fetchImpl) {
     addEventListener() {}
   };
   const context = {
-    document, fetch: fetchImpl, console,
+    document, fetch: (url, options) => url === '/api/build-paths'
+      ? Promise.resolve({ ok: true, json: async () => ({ ok: true, guideCount: 0, recommendations: [] }) })
+      : fetchImpl(url, options), console,
     Date, Set, Map, JSON, Number, String, Array,
     navigator: {}, window: { prompt() {} }
   };
@@ -98,6 +100,7 @@ test('invalid API response falls back rather than showing a blank screen', async
 });
 
 test('a second analysis request supersedes the first response', async () => {
+  // Guide lookup is resolved immediately by setup; deferred requests below are for /api/recommend.
   const resolvers = [];
   const { context, element } = setup(() => new Promise(resolve => resolvers.push(resolve)));
   const first = runInNewContext('analyzeObserved()', context);
