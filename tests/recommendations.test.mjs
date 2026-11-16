@@ -64,3 +64,24 @@ test('Riot and CommunityDragon champion IDs match despite case differences', () 
   assert.deepEqual(match.missingUnits, ['DA_18_B']);
   assert.deepEqual(match.removeUnits, ['DA_18_C']);
 });
+
+test('clustering treats case-variant champion IDs as the same observed board', () => {
+  const variants = [
+    { placement: 2, units_json: JSON.stringify(units), traits_json: JSON.stringify(traits) },
+    { placement: 4, units_json: JSON.stringify(units.map(u => ({
+      ...u, character_id: u.character_id.toLowerCase()
+    }))), traits_json: JSON.stringify(traits) }
+  ];
+  const groups = clusterCompositions(variants);
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].sampleSize, 2);
+});
+
+test('one board never contains duplicate champions differing only in casing', () => {
+  const groups = clusterCompositions([{
+    placement: 2,
+    units_json: JSON.stringify([...units, { ...units[0], character_id: 'da_18_a' }]),
+    traits_json: JSON.stringify(traits)
+  }]);
+  assert.equal(groups[0].unitIds.length, 2);
+});
