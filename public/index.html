@@ -156,7 +156,7 @@ async function fetchData(){
  $('debugPanel').open=true;
 }
 
-function unit(id){return state.champions.find(x=>x.id.toLowerCase()===String(id).toLowerCase())}
+function unit(id){const k=String(id||'').toLowerCase().replace(/^(da_18_|tft18_|tft_18_|da_)/,'').replace(/[^a-z0-9]/g,'');return state.champions.find(x=>x.id.toLowerCase()===String(id).toLowerCase())||state.champions.find(x=>x.id.toLowerCase().replace(/^(da_18_|tft18_|tft_18_|da_)/,'').replace(/[^a-z0-9]/g,'')===k)}
 function item(id){return state.allItems.find(x=>x.id===id)}
 function changeItem(id,delta){analysisVersion++;$('analyze').disabled=false;const index=state.items.findIndex(x=>String(x).toLowerCase()===String(id).toLowerCase());if(delta>0)state.items.push(id);else if(index>=0)state.items.splice(index,1);render();$('results').innerHTML='<div class="status">아이템 수량이 변경됐어. 분석하기를 눌러 줘.</div>';}
 function toggle(type,id){if(type==='items'){changeItem(id,1);return}analysisVersion++;$('analyze').disabled=false;const a=state[type];const key=String(id).toLowerCase();const idx=a.findIndex(x=>String(x).toLowerCase()===key);if(idx>=0)a.splice(idx,1);else a.push(unit(id)?.id||id);render();$('results').innerHTML='<div class="status">선택이 변경됐어. 분석하기를 눌러 줘.</div>'; }
@@ -226,6 +226,7 @@ let analysisVersion=0;
 async function analyzeObserved(){
  const version=++analysisVersion;
  const selectedUnits=[...state.units];
+ const guideKey=x=>String(x||'').toLowerCase().replace(/^(da_18_|tft18_|tft_18_|da_)/,'').replace(/[^a-z0-9]/g,'');
  if(!state.units.length){$('analyze').disabled=false;$('results').innerHTML='<div class="status">기물을 한 개 이상 선택해 줘.</div>';return}
  const button=$('analyze');button.disabled=true;status('레벨별 빌드업 경로를 확인 중…');
  try {
@@ -234,8 +235,8 @@ async function analyzeObserved(){
      const paths=await pathResponse.json();
      if(version!==analysisVersion)return;
      if(paths.ok && paths.recommendations?.length){
-       $('results').innerHTML=paths.recommendations.map((p,i)=>`<article class="result ${i===0?'active':''}"><div class="resulttop"><div><b>${i+1}순위 · ${esc(p.name)}</b><div class="traits">${esc(p.stageLevel)}레벨 경로 · 기물 유사도 ${Math.round(p.stageCoverage*100)}% · 경로 유사도 ${p.similarity}점 (승률 아님)</div></div></div><div class="lineup">${p.stageUnits.map(id=>{const c=unit(id),have=p.matchedUnits.some(x=>x.toLowerCase()===id.toLowerCase());return `<div class="champ"><div class="champimg ${c?'cost'+c.cost:''}">${c?img(c.icon):'?'}<span class="mark ${have?'have':''}">${have?'✓':'+'}</span><div class="name">${esc(c?.name||id)}</div></div></div>`}).join('')}</div><div class="targets"><strong>추가 필요한 기물</strong><div class="targetrow">${p.missingUnits.map(id=>`<span class="pill">${esc(unit(id)?.name||id)}</span>`).join('')||'없음'}</div><div class="note">아이템 일치 ${p.matchedItems.length}종 · 단계별 빌드업</div><details><summary>레벨별 경로 보기</summary>${p.stages.map(st=>`<div class="sectionlabel">${st.level}레벨</div><div class="targetrow">${st.units.map(id=>`<span class="pill">${esc(unit(id)?.name||id)}</span>`).join('')}</div>`).join('')}</details></div></article>`).join('');
-       status('검증된 메타 경로 '+paths.guideCount+'개 기준 · 유사도는 승률이 아니야.');button.disabled=false;return;
+       $('results').innerHTML=paths.recommendations.map((p,i)=>`<article class="result ${i===0?'active':''}"><div class="resulttop"><div><b>${i+1}순위 · ${esc(p.name)}</b><div class="traits">${esc(p.stageLevel)}레벨 경로 · 기물 유사도 ${Math.round(p.stageCoverage*100)}% · 경로 유사도 ${p.similarity}점 (승률 아님)</div></div></div><div class="lineup">${p.stageUnits.map(id=>{const c=unit(id),have=p.matchedUnits.some(x=>guideKey(x)===guideKey(id));return `<div class="champ"><div class="champimg ${c?'cost'+c.cost:''}">${c?img(c.icon):'?'}<span class="mark ${have?'have':''}">${have?'✓':'+'}</span><div class="name">${esc(c?.name||id)}</div></div></div>`}).join('')}</div><div class="targets"><strong>추가 필요한 기물</strong><div class="targetrow">${p.missingUnits.map(id=>`<span class="pill">${esc(unit(id)?.name||id)}</span>`).join('')||'없음'}</div><div class="note">아이템 일치 ${p.matchedItems.length}개 · 패치 ${esc(p.patch||'미상')} · <a href="${esc(p.source||'#')}" target="_blank" rel="noopener noreferrer">원본 공략 확인</a> · 단계별 빌드업</div><details><summary>레벨별 경로 보기</summary>${p.stages.map(st=>`<div class="sectionlabel">${st.level}레벨</div><div class="targetrow">${st.units.map(id=>`<span class="pill">${esc(unit(id)?.name||id)}</span>`).join('')}</div>`).join('')}</details></div></article>`).join('');
+       status('출처 표기된 패치 '+esc(paths.recommendations[0]?.patch||'미상')+' 공략 '+paths.guideCount+'개 참고 · 최신성/승률 보장 없음.');button.disabled=false;return;
      }
    }
  } catch(e){log('레벨별 경로 API 확인 실패: '+e.message)}
