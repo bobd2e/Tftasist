@@ -1,4 +1,6 @@
 import { clusterCompositions, recommendCompositions } from './meta-analyzer.js';
+import { rankBuildPaths } from './build-paths.js';
+import { metaGuides } from './meta-guides.js';
 
 const json = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 
@@ -16,7 +18,7 @@ async function riotGet(url, apiKey) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (!['/api/meta', '/api/matches', '/api/collect', '/api/compositions', '/api/recommend'].includes(url.pathname)) {
+    if (!['/api/meta', '/api/matches', '/api/collect', '/api/compositions', '/api/recommend', '/api/build-paths'].includes(url.pathname)) {
       return env.ASSETS.fetch(request);
     }
 
@@ -27,8 +29,20 @@ export default {
         return json({ ok: false, error: 'Unauthorized' }, 401);
       }
       if (!env.tft_meta_db) return json({ ok: false, error: 'D1 binding missing' }, 500);
-    } else if (url.pathname === '/api/recommend' ? request.method !== 'POST' : request.method !== 'GET') {
-      return json({ ok: false, error: url.pathname === '/api/recommend' ? 'POST required' : 'GET required' }, 405);
+    } else if (['/api/recommend', '/api/build-paths'].includes(url.pathname) ? request.method !== 'POST' : request.method !== 'GET') {
+      return json({ ok: false, error: ['/api/recommend', '/api/build-paths'].includes(url.pathname) ? 'POST required' : 'GET required' }, 405);
+    }
+
+    if (url.pathname === '/api/build-paths') {
+      let input;
+      try { input = await request.json(); } catch { return json({ok:false,error:'Invalid JSON body'},400); }
+      const validIds = xs => Array.isArray(xs) && xs.length <= 100 && xs.every(id => typeof id === 'string' && /^[A-Za-z0-9_]{1,100}$/.test(id));
+      if (!input || !validIds(input.units) || !validIds(input.items) || !Number.isInteger(input.level) || input.level < 3 || input.level > 10) {
+        return json({ok:false,error:'Expected units, items and level (3-10)'},400);
+      }
+      return json({ok:true,source:'Verified level-by-level guides',guideCount:metaGuides.length,
+        recommendations:rankBuildPaths(metaGuides,input),
+        note:metaGuides.length ? 'Route similarity, not win probability.' : 'No verified level-by-level guides registered yet; no route rankings invented.'});
     }
 
     if (url.pathname === '/api/recommend') {
