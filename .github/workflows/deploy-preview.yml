@@ -25,6 +25,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --name tftasist-preview
+          command: deploy src/index.js --name tftasist-preview --assets ./public --compatibility-date 2026-11-15 --config wrangler.jsonc
       - name: Preview address
         run: echo "Preview should be available at the workers.dev URL for tftasist-preview; confirm the URL in Cloudflare dashboard."
