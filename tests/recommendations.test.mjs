@@ -32,6 +32,8 @@ test('POST /api/recommend returns feasible groups without Riot API key', async (
   assert.equal(response.status, 200);
   assert.equal(body.recommendations[0].missingCount, 1);
   assert.equal(body.sampledParticipants, 3);
+  assert.equal(body.analyzedParticipants, 3);
+  assert.equal(body.excludedParticipants, 0);
 });
 
 test('POST /api/recommend rejects malformed input', async () => {
@@ -84,4 +86,17 @@ test('one board never contains duplicate champions differing only in casing', ()
     traits_json: JSON.stringify(traits)
   }]);
   assert.equal(groups[0].unitIds.length, 2);
+});
+
+test('recommendations distinguish collected participants from usable board samples', async () => {
+  const invalid = { placement: 6, units_json: '[]', traits_json: '[]' };
+  const dbWithInvalid = { prepare() { return { async all() { return { results: [...rows, invalid] }; } }; } };
+  const response = await worker.fetch(new Request('https://example.com/api/recommend', {
+    method: 'POST', body: JSON.stringify({ units: ['DA_18_A'] })
+  }), { tft_meta_db: dbWithInvalid });
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(body.sampledParticipants, 4);
+  assert.equal(body.analyzedParticipants, 3);
+  assert.equal(body.excludedParticipants, 1);
 });
