@@ -42,3 +42,15 @@ assert.equal(clusters[0].confidence, 'low');
 const emptyTraits = { ...sample(2), traits_json: '[]' };
 const emptyUnits = { ...sample(2), units_json: '[]' };
 assert.equal(clusterCompositions([emptyTraits, emptyUnits]).length, 0);
+
+test('malformed non-array boards and null champion entries do not crash clustering', () => {
+  const malformed = { placement: 2, units_json: '{}', traits_json: '[]' };
+  const partial = {
+    placement: 3,
+    units_json: JSON.stringify([null, { character_id: 'DA_18_A', tier: 2, itemNames: [] }]),
+    traits_json: JSON.stringify([{ name: 'DA_18_Trait', tier_current: 1, num_units: 1 }])
+  };
+  const groups = clusterCompositions([malformed, partial]);
+  assert.equal(groups.reduce((n, g) => n + g.sampleSize, 0), 1);
+  assert.deepEqual(groups[0].unitIds, ['DA_18_A']);
+});
