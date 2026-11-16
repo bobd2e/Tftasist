@@ -29,3 +29,12 @@ assert.equal(separate.length, 2);
 assert.deepEqual(separate.map(c => c.sampleSize), [1, 1]);
 assert.equal(clusterCompositions([]).length, 0);
 assert.equal(clusterCompositions([{ placement: 2, units_json: '{broken', traits_json: '[]' }]).length, 0);
+
+const invalidRows = [
+  { ...sample(1), placement: 0 },
+  { ...sample(1), placement: 9 },
+  { ...sample(1), placement: 2.5 },
+  { ...sample(1), placement: null }
+];
+assert.equal(clusterCompositions(invalidRows).length, 0);
+assert.equal(clusters[0].confidence, 'low');
