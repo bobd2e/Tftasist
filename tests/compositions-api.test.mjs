@@ -33,6 +33,9 @@ test('GET /api/compositions reads D1 without requiring Riot API key', async () =
   assert.equal(res.status, 200);
   assert.equal(body.ok, true);
   assert.equal(body.sampledParticipants, 3);
+  assert.equal(body.analyzedParticipants, 3);
+  assert.equal(body.excludedParticipants, 0);
+  assert.equal(body.groupCount, 1);
   assert.equal(body.compositions.length, 1);
   assert.equal(body.compositions[0].averagePlacement, 3);
   assert.equal(body.compositions[0].top4Rate, 0.667);
@@ -66,4 +69,15 @@ test('GET /api/compositions handles D1 read errors', async () => {
   const res = await worker.fetch(new Request('https://example.com/api/compositions'), env);
   assert.equal(res.status, 500);
   assert.equal((await res.json()).error, 'Composition analysis failed');
+});
+
+test('GET /api/compositions reports excluded malformed participants', async () => {
+  const env = { tft_meta_db: { prepare() { return { bind() { return { async all() {
+    return { results: [row(1), { placement: 9, units_json: '[]', traits_json: '[]' }] };
+  } }; } }; } } };
+  const res = await worker.fetch(new Request('https://example.com/api/compositions'), env);
+  const body = await res.json();
+  assert.equal(body.sampledParticipants, 2);
+  assert.equal(body.analyzedParticipants, 1);
+  assert.equal(body.excludedParticipants, 1);
 });
