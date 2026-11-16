@@ -62,3 +62,20 @@ test('changing selection during an API request discards stale recommendations', 
   assert.match(element('results').innerHTML, /선택이 변경됐어/);
   assert.equal(element('analyze').disabled, false);
 });
+
+test('API failure falls back to local synergy candidate generation', async () => {
+  const { context, element } = setup(async () => ({ ok: false, status: 503 }));
+  await runInNewContext('analyzeObserved()', context);
+  assert.match(element('status').textContent, /시너지 기반 탐색으로 전환/);
+  assert.match(element('results').innerHTML, /후보 1/);
+  assert.equal(element('analyze').disabled, false);
+});
+
+test('empty selection never calls the recommendation API', async () => {
+  let calls = 0;
+  const { context, element } = setup(async () => { calls++; throw Error('Unexpected API request'); });
+  runInNewContext('state.units=[]', context);
+  await runInNewContext('analyzeObserved()', context);
+  assert.equal(calls, 0);
+  assert.match(element('results').innerHTML, /기물을 한 개 이상 선택/);
+});
