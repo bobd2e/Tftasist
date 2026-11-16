@@ -39,7 +39,7 @@ export function rankBuildPaths(guides, input, limit = 5) {
     result.push({
       id: guide.id, name: guide.name, kind: guide.kind || 'level-guide', source: guide.source || null, patch: guide.patch || null,
       level, stageLevel: stage?.level ?? null, stageUnits: stage?.units ?? [], stages,
-      finalUnits: guide.finalUnits || stages.at(-1).units, coreItems: guide.items || [],
+      finalUnits: guide.finalUnits || stages.at(-1).units, coreItems: guide.items || [], itemByUnit: guide.itemByUnit || {}, itemSource: guide.itemSource || null,
       matchedUnits: (stage?.units || []).filter(x => owned.includes(key(x))),
       missingUnits: (stage?.units || []).filter(x => !owned.includes(key(x))),
       matchedItems, finalMatchedUnits: (guide.finalUnits || stages.at(-1).units).filter(x => owned.includes(key(x))),
