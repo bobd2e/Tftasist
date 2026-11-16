@@ -34,6 +34,14 @@ function setup(fetchImpl) {
   return { context, element };
 }
 
+async function waitFor(condition) {
+  for (let attempt = 0; attempt < 30; attempt++) {
+    if (condition()) return;
+    await new Promise(resolve => setImmediate(resolve));
+  }
+  throw new Error('Expected recommendation request was never started');
+}
+
 test('clicking analyze displays observed recommendations and normalized add button', async () => {
   const { context, element } = setup(async (url, options) => {
     assert.equal(url, '/api/recommend');
@@ -58,8 +66,8 @@ test('changing selection during an API request discards stale recommendations', 
   let resolve;
   const { context, element } = setup(() => new Promise(r => { resolve = r; }));
   const pending = runInNewContext('analyzeObserved()', context);
+  await waitFor(() => typeof resolve === 'function');
   runInNewContext("toggle('units','DA_18_B')", context);
-  await Promise.resolve(); await Promise.resolve();
   resolve({ ok: true, json: async () => ({ ok: true, sampledParticipants: 1,
     recommendations: [{ unitIds: ['DA_18_A'], matchedUnits: ['DA_18_A'], missingUnits: [], removeUnits: [], sampleSize: 1 }] }) });
   await pending;
@@ -106,7 +114,7 @@ test('a second analysis request supersedes the first response', async () => {
   const { context, element } = setup(() => new Promise(resolve => resolvers.push(resolve)));
   const first = runInNewContext('analyzeObserved()', context);
   const second = runInNewContext('analyzeObserved()', context);
-  await Promise.resolve(); await Promise.resolve();
+  await waitFor(() => resolvers.length === 2);
   resolvers[1]({ ok: true, json: async () => ({ ok: true, sampledParticipants: 2,
     recommendations: [{ unitIds: ['DA_18_B'], matchedUnits: [], missingUnits: ['DA_18_B'],
       removeUnits: ['DA_18_A'], sampleSize: 2, averagePlacement: 4, matchCount: 0 }] }) });
@@ -123,6 +131,7 @@ test('reloading champion data invalidates an in-flight recommendation', async ()
   let resolve;
   const { context, element } = setup(() => new Promise(r => { resolve = r; }));
   const pending = runInNewContext('analyzeObserved()', context);
+  await waitFor(() => typeof resolve === 'function');
   runInNewContext(`load({setNumber:18,champions:[
     {apiName:'da_18_a',name:'A',cost:1,traits:['TestTrait']},
     {apiName:'DA_18_B',name:'B',cost:2,traits:['TestTrait']}
