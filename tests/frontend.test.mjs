@@ -12,4 +12,9 @@ test('frontend inline JavaScript parses and includes observed recommendation wir
   assert.ok(html.includes('async function analyzeObserved('));
   assert.ok(html.includes("fetch('/api/recommend'"));
   assert.ok(html.includes("state.ready?analyzeObserved()"));
+  assert.ok(html.includes('if(!response.ok)throw Error'));
+  assert.ok(html.includes('generate()}'));
+  assert.ok(html.includes('missingUnits'));
+  assert.ok(html.includes('removeUnits'));
+  assert.ok(html.includes('sampledParticipants'));
 });
