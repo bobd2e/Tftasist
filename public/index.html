@@ -130,8 +130,12 @@ function normalize(raw){
  return {champions,traits,items:itemPool};
 }
 function load(raw,origin){
- const d=normalize(raw);state.raw=raw;state.champions=d.champions;state.traits=d.traits;state.allItems=d.items;state.ready=true;
- state.units=state.units.filter(id=>d.champions.some(x=>x.id===id));state.items=state.items.filter(id=>d.items.some(x=>x.id===id));
+ const d=normalize(raw);
+ analysisVersion++;
+ $('analyze').disabled=false;
+ $('results').innerHTML='<div class="status">데이터가 갱신됐어. 분석하기를 다시 눌러 줘.</div>';
+ state.raw=raw;state.champions=d.champions;state.traits=d.traits;state.allItems=d.items;state.ready=true;
+ state.units=[...new Set(state.units.map(id=>d.champions.find(x=>x.id.toLowerCase()===id.toLowerCase())?.id).filter(Boolean))];state.items=state.items.filter(id=>d.items.some(x=>x.id===id));
  status(`세트 18 · 기물 ${d.champions.length}종 · 특성 ${d.traits.length}종 · 아이템 ${d.items.length}종`);log('연결 성공: '+origin+' / 기물 '+d.champions.length+' / 아이템 '+d.items.length);
  $('sourceTag').textContent='데이터 준비 완료';render();
 }
