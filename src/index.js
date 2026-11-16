@@ -40,12 +40,17 @@ export default {
           'SELECT p.placement, p.units_json, p.traits_json FROM participants p JOIN matches m ON m.match_id = p.match_id WHERE m.set_number = 18 ORDER BY m.played_at DESC LIMIT ?'
         ).bind(limit).all();
         const participants = rows.results ?? [];
+        const compositions = clusterCompositions(participants);
+        const analyzedParticipants = compositions.reduce((sum, group) => sum + group.sampleSize, 0);
         return json({
           ok: true,
           source: 'Collected Riot Games match data',
           setNumber: 18,
           sampledParticipants: participants.length,
-          compositions: clusterCompositions(participants),
+          analyzedParticipants,
+          excludedParticipants: participants.length - analyzedParticipants,
+          groupCount: compositions.length,
+          compositions,
           note: 'Experimental similarity groups; not validated meta recommendations.'
         });
       } catch (error) {
