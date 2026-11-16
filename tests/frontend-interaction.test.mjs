@@ -28,7 +28,7 @@ function setup(fetchImpl) {
   };
   // Suppress startup data loading; test explicitly triggers analysis.
   runInNewContext(script.replace(/fetchData\(\);\s*$/, ''), context);
-  runInNewContext("state.ready=true;state.units=['DA_18_A'];state.champions=[{id:'DA_18_A',name:'A',cost:1,traits:[],icon:''},{id:'DA_18_B',name:'B',cost:2,traits:[],icon:''}]", context);
+  runInNewContext("state.ready=true;state.units=['DA_18_A'];state.champions=[{id:'DA_18_A',name:'A',cost:1,traits:['TestTrait'],icon:''},{id:'DA_18_B',name:'B',cost:2,traits:['TestTrait'],icon:''}]", context);
   return { context, element };
 }
 
