@@ -18,5 +18,5 @@ test('five Korean patch 18.6 boards have a source and are final-only', () => {
 test('Korean name overlap returns a sourced final board without fabricated early stages', () => {
   const result=rankBuildPaths(metaGuides,{units:['덩굴정령','돌거북'],items:[],level:5});
   assert.ok(result.some(x=>x.id==='brambleback'));
-  assert.ok(result.every(x=>x.kind==='final-board' && x.stageLevel===9));
+  assert.ok(result.every(x=>x.kind==='final-board' && x.stageLevel===null && x.stageUnits.length===0));
 });
