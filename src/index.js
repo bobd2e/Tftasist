@@ -45,7 +45,9 @@ export default {
         ).all();
         const participants = rows.results ?? [];
         const groups = clusterCompositions(participants);
+        const analyzedParticipants = groups.reduce((sum, group) => sum + group.sampleSize, 0);
         return json({ ok: true, setNumber: 18, sampledParticipants: participants.length,
+          analyzedParticipants, excludedParticipants: participants.length - analyzedParticipants,
           recommendations: recommendCompositions(groups, input.units),
           note: 'Experimental feasibility matches from observed boards; not proven optimal.' });
       } catch { return json({ ok: false, error: 'Recommendation analysis failed' }, 500); }
