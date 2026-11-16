@@ -105,7 +105,14 @@ export function clusterCompositions(participants = [], threshold = 0.55) {
 // Compare case-insensitively but return original IDs for the client.
 const unitKey = id => id.toLowerCase();
 
-export function recommendCompositions(groups, ownedUnitIds, maxResults = 5) {
+export function recommendCompositions(groups, ownedUnitIds, maxResults = 5, ownedItemIds = []) {
+  const itemKey = id => String(id || '').toLowerCase().replace(/^(da_|tft_item_)/, '');
+  const itemCounts = new Map();
+  for (const id of Array.isArray(ownedItemIds) ? ownedItemIds : []) {
+    if (typeof id !== 'string') continue;
+    const k = itemKey(id);
+    itemCounts.set(k, (itemCounts.get(k) || 0) + 1);
+  }
   const ownedByKey = new Map();
   for (const id of Array.isArray(ownedUnitIds) ? ownedUnitIds : []) {
     if (typeof id === 'string' && id.trim() && !ownedByKey.has(unitKey(id))) {
@@ -128,6 +135,13 @@ export function recommendCompositions(groups, ownedUnitIds, maxResults = 5) {
       const removeUnits = [...ownedByKey.entries()]
         .filter(([key]) => !targetByKey.has(key)).map(([, id]) => id);
       const swapCount = Math.min(removeUnits.length, missingUnits.length);
+      const desiredItems = (Array.isArray(group.coreUnits) ? group.coreUnits : []).flatMap(u => Array.isArray(u.items) ? u.items : []);
+      const available = new Map(itemCounts);
+      let itemMatchCount = 0;
+      for (const id of desiredItems) {
+        const k = itemKey(id);
+        if ((available.get(k) || 0) > 0) { itemMatchCount++; available.set(k, available.get(k) - 1); }
+      }
       return {
         ...group,
         unitIds: target,
@@ -136,6 +150,8 @@ export function recommendCompositions(groups, ownedUnitIds, maxResults = 5) {
         removeUnits,
         retainedUnits: matchedUnits,
         matchCount: matchedUnits.length,
+        itemMatchCount,
+        observedItemCount: desiredItems.length,
         missingCount: missingUnits.length,
         removeCount: removeUnits.length,
         swapCount,
@@ -147,6 +163,7 @@ export function recommendCompositions(groups, ownedUnitIds, maxResults = 5) {
     })
     .sort((a, b) =>
       b.matchCount - a.matchCount ||
+      b.itemMatchCount - a.itemMatchCount ||
       a.changeCost - b.changeCost ||
       b.coverage - a.coverage ||
       b.sampleSize - a.sampleSize ||
