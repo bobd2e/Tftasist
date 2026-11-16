@@ -113,6 +113,7 @@ test('a second analysis request supersedes the first response', async () => {
   const resolvers = [];
   const { context, element } = setup(() => new Promise(resolve => resolvers.push(resolve)));
   const first = runInNewContext('analyzeObserved()', context);
+  await waitFor(() => resolvers.length === 1);
   const second = runInNewContext('analyzeObserved()', context);
   await waitFor(() => resolvers.length === 2);
   resolvers[1]({ ok: true, json: async () => ({ ok: true, sampledParticipants: 2,
