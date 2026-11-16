@@ -188,11 +188,28 @@ function observedItemPanel(b){
  const matched=owned.filter(it=>cores.some(u=>u.items.some(id=>normalized(it.id)===normalized(id))));
  const baseNames=new Set(['B.F. 대검','곡궁','쇠사슬 조끼','음전자 망토','쓸데없이 큰 지팡이','여신의 눈물','거인의 허리띠','연습용 장갑','뒤집개','프라이팬']);
  const components=owned.filter(it=>baseNames.has(it.name));
- const recipes=state.allItems.filter(it=>it.composition?.length===2).filter(it=>{
-   const parts=it.composition.map(x=>String(x).toLowerCase());
-   const inventory=components.map(x=>[String(x.id).toLowerCase(),String(x.raw?.id||'').toLowerCase()]).flat();
-   return parts.every((part,i)=>inventory.includes(part)&& (parts[0]!==parts[1]||components.filter(x=>String(x.id).toLowerCase()===part||String(x.raw?.id||'').toLowerCase()===part).length>=2));
+ const componentAliases=new Map([
+ ['B.F. 대검',['bf','sword']],['곡궁',['recurve','bow']],['쇠사슬 조끼',['chain','vest']],
+ ['음전자 망토',['negatron','cloak']],['쓸데없이 큰 지팡이',['needlessly','rod']],
+ ['여신의 눈물',['tear','goddess']],['거인의 허리띠',['giant','belt']],
+ ['연습용 장갑',['sparring','glove']],['뒤집개',['spatula']],['프라이팬',['frying','pan']]
+ ]);
+ const recipeParts=it=>(it.composition||[]).map(part=>{
+   const raw=String(typeof part==='object'?(part.apiName||part.id||''):part).toLowerCase();
+   const found=state.allItems.find(x=>String(x.id).toLowerCase()===raw||String(x.raw?.id).toLowerCase()===raw);
+   if(found&&baseNames.has(found.name))return found.name;
+   for(const [name,aliases] of componentAliases)if(aliases.some(a=>raw.includes(a)))return name;
+   return null;
  });
+ const counts=new Map();components.forEach(it=>counts.set(it.name,(counts.get(it.name)||0)+1));
+ const canCraft=parts=>{const needed=new Map();for(const p of parts){if(!p)return false;needed.set(p,(needed.get(p)||0)+1)}return [...needed].every(([name,n])=>(counts.get(name)||0)>=n)};
+ const recipes=state.allItems.filter(it=>it.composition?.length===2&&canCraft(recipeParts(it)));
+ // Explicitly verify the evergreen Sword + Tear recipe even if source IDs use incompatible aliases.
+ if(canCraft(['B.F. 대검','여신의 눈물'])&&!recipes.some(it=>it.name==='쇼진의 창')){
+   const shojin=state.allItems.find(it=>it.name==='쇼진의 창')||observedItem('DA_SpearOfShojin');
+   if(shojin)recipes.push(shojin);
+   else recipes.push({id:'shojin-recipe',name:'쇼진의 창',icon:''});
+ }
  return `<div class="targets"><strong>🎒 챔피언별 아이템 배치 · 실제 경기 참고</strong>
   <div class="note">대표 경기의 장착 기록이야. 최적 세팅으로 검증된 추천은 아니야.</div>
   ${cores.map(u=>`<div style="margin-top:10px"><b>${esc(unit(u.id)?.name||u.id)}</b><div class="row" style="margin-top:5px">${u.items.map(id=>{const it=observedItem(id);const have=owned.some(o=>normalized(o.id)===normalized(id));return `<span class="pill owneditem" title="${esc(it?.name||id)}">${it?.icon?img(it.icon):''}${esc(it?.name||'아이템 정보 미확인')}${have?' ✓':''}</span>`}).join('')}</div></div>`).join('')||'<div class="note">이 후보에는 확인 가능한 아이템 기록이 없어.</div>'}
