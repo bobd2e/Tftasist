@@ -157,11 +157,12 @@ async function fetchData(){
 
 function unit(id){return state.champions.find(x=>x.id.toLowerCase()===String(id).toLowerCase())}
 function item(id){return state.allItems.find(x=>x.id===id)}
-function toggle(type,id){analysisVersion++;$('analyze').disabled=false;const a=state[type];const key=String(id).toLowerCase();const idx=a.findIndex(x=>String(x).toLowerCase()===key);if(idx>=0)a.splice(idx,1);else a.push(type==='units'?(unit(id)?.id||id):id);render();$('results').innerHTML='<div class="status">선택이 변경됐어. 분석하기를 눌러 줘.</div>'; }
+function changeItem(id,delta){analysisVersion++;$('analyze').disabled=false;const index=state.items.findIndex(x=>String(x).toLowerCase()===String(id).toLowerCase());if(delta>0)state.items.push(id);else if(index>=0)state.items.splice(index,1);render();$('results').innerHTML='<div class="status">아이템 수량이 변경됐어. 분석하기를 눌러 줘.</div>';}
+function toggle(type,id){if(type==='items'){changeItem(id,1);return}analysisVersion++;$('analyze').disabled=false;const a=state[type];const key=String(id).toLowerCase();const idx=a.findIndex(x=>String(x).toLowerCase()===key);if(idx>=0)a.splice(idx,1);else a.push(unit(id)?.id||id);render();$('results').innerHTML='<div class="status">선택이 변경됐어. 분석하기를 눌러 줘.</div>'; }
 function render(){
  $('ucount').textContent=state.units.length;$('icount').textContent=state.items.length;
  $('ownedUnits').innerHTML=state.units.map(id=>`<button class="chip" data-type="units" data-id="${esc(id)}">✓ ${esc(unit(id)?.name||id)} ×</button>`).join('')||'<small>선택한 기물 없음</small>';
- $('ownedItems').innerHTML=state.items.map(id=>`<button class="chip" data-type="items" data-id="${esc(id)}">✓ ${esc(item(id)?.name||id)} ×</button>`).join('')||'<small>선택한 아이템 없음</small>';
+ $('ownedItems').innerHTML=[...new Set(state.items)].map(id=>`<span class="chip"><button type="button" data-item-delta="-1" data-id="${esc(id)}" aria-label="${esc(item(id)?.name||id)} 하나 제거">−</button> ${esc(item(id)?.name||id)} ×${state.items.filter(x=>x===id).length} <button type="button" data-item-delta="1" data-id="${esc(id)}" aria-label="${esc(item(id)?.name||id)} 하나 추가">＋</button></span>`).join('')||'<small>선택한 아이템 없음</small>';
  const q=$('search').value.trim().toLowerCase();
  const units=state.champions.filter(x=>(x.name+' '+x.traits.join(' ')).toLowerCase().includes(q));
  $('unitPicker').innerHTML=units.map(c=>`<button class="unit ${state.units.includes(c.id)?'selected':''}" data-type="units" data-id="${esc(c.id)}">${img(c.icon,'portrait cost'+c.cost)}<span class="grow"><b>${esc(c.name)}</b><div class="traits">${esc(c.cost+'코스트 · '+c.traits.join(' · '))}</div></span><span class="check">${state.units.includes(c.id)?'✓':'＋'}</span></button>`).join('')||'<p class="note">검색 결과 없음</p>';
@@ -169,7 +170,7 @@ function render(){
  // Search always spans all categories, regardless of the active category tab.
  const its=state.allItems.filter(x=>(q?x.name.toLowerCase().includes(q):x.category===state.itemCategory));
  document.querySelectorAll('[data-item-category]').forEach(b=>b.classList.toggle('active',Number(b.dataset.itemCategory)===state.itemCategory));
- $('itemPicker').innerHTML=categoryNames.map((name,k)=>{const group=its.filter(i=>i.category===k);return group.length?`<section class="itemgroup"><div class="sectionlabel">${name} · ${group.length}</div><div class="items">${group.map(i=>`<button class="item ${state.items.includes(i.id)?'selected':''}" data-type="items" data-id="${esc(i.id)}">${img(i.icon)}<span>${esc(i.name)}</span>${state.items.includes(i.id)?'<b class="check">✓</b>':''}</button>`).join('')}</div></section>`:''}).join('')||'<p class="note">검색 결과가 없어.</p>';
+ $('itemPicker').innerHTML=categoryNames.map((name,k)=>{const group=its.filter(i=>i.category===k);return group.length?`<section class="itemgroup"><div class="sectionlabel">${name} · ${group.length}</div><div class="items">${group.map(i=>`<button class="item ${state.items.includes(i.id)?'selected':''}" data-type="items" data-id="${esc(i.id)}">${img(i.icon)}<span>${esc(i.name)}</span>${state.items.includes(i.id)?'<b class="check">×'+state.items.filter(id=>id===i.id).length+'</b>':''}</button>`).join('')}</div></section>`:''}).join('')||'<p class="note">검색 결과가 없어.</p>';
 }
 function traitCounts(ids){const counts={};for(const id of ids){const c=unit(id);if(!c)continue;for(const t of new Set(c.traits))counts[t]=(counts[t]||0)+1}return counts}
 function breakpoints(t){const tr=state.traits.find(x=>x.name===t);return (tr?.effects||[]).map(e=>Number(e.minUnits??e.minUnitsRequired??e.min??0)).filter(n=>n>0).sort((a,b)=>a-b)}
@@ -287,7 +288,7 @@ function generate(){
    <div class="targets"><strong>◎ 추가 확보 목표 · 기물 ${missing.length}종</strong><div class="targetrow">${missing.map(id=>`<button data-type="units" data-id="${esc(id)}">＋ ${esc(unit(id).name)} · ${unit(id).cost}코</button>`).join('')||'<span class="check">목표 기물 확보 완료</span>'}</div><div class="note">현재는 보유 기물 중심의 특성 조합 후보야. 아이템 배치·증강 추천·메타 승률은 검증된 외부 데이터 연결 전이라 표시하지 않아.</div></div></article>`
  }).join('')||'<div class="status">후보를 생성할 수 없어요.</div>';
 }
-document.addEventListener('click',e=>{const btn=e.target.closest('[data-type][data-id]');if(btn){toggle(btn.dataset.type,btn.dataset.id);return}});
+document.addEventListener('click',e=>{const delta=e.target.closest('[data-item-delta][data-id]');if(delta){changeItem(delta.dataset.id,Number(delta.dataset.itemDelta));return}const btn=e.target.closest('[data-type][data-id]');if(btn){toggle(btn.dataset.type,btn.dataset.id);return}});
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));$('unitPicker').classList.toggle('hidden',state.tab!=='units');$('itemPicker').classList.toggle('hidden',state.tab!=='items');$('itemCategories').classList.toggle('hidden',state.tab!=='items');$('search').value='';$('search').placeholder=state.tab==='units'?'기물 이름 또는 특성 검색':'아이템 이름 검색';render()});
 document.querySelectorAll('[data-item-category]').forEach(b=>b.onclick=()=>{state.itemCategory=Number(b.dataset.itemCategory);render()});
 $('search').addEventListener('input',render);$('analyze').onclick=()=>state.ready?analyzeObserved():status('먼저 데이터를 연결해 주세요.');
