@@ -47,7 +47,7 @@ test('clicking analyze displays observed recommendations and normalized add butt
   await element('analyze').onclick();
   assert.match(element('results').innerHTML, /수집 덱 후보 1/);
   assert.match(element('results').innerHTML, /data-id="DA_18_B"/);
-  assert.match(element('results').innerHTML, /보유 1\\/2/);
+  assert.ok(element('results').innerHTML.includes('보유 1/2'));
   assert.match(element('status').textContent, /수집 경기 3명/);
   assert.equal(element('analyze').disabled, false);
 });
