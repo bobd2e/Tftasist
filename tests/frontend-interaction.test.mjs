@@ -130,3 +130,12 @@ test('reloading champion data invalidates an in-flight recommendation', async ()
   assert.equal(element('analyze').disabled, false);
   assert.equal(runInNewContext('state.units[0]', context), 'da_18_a');
 });
+
+test('case-variant champion clicks remove the existing selection instead of duplicating it', () => {
+  const { context } = setup(async () => { throw Error('No request expected'); });
+  runInNewContext("toggle('units','da_18_a')", context);
+  assert.equal(runInNewContext('state.units.length', context), 0);
+  runInNewContext("toggle('units','da_18_b')", context);
+  assert.equal(runInNewContext('state.units.length', context), 1);
+  assert.equal(runInNewContext('state.units[0]', context), 'DA_18_B');
+});
