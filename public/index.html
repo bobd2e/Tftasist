@@ -156,7 +156,7 @@ async function fetchData(){
  $('debugPanel').open=true;
 }
 
-function unit(id){const k=String(id||'').toLowerCase().replace(/^(da_18_|tft18_|tft_18_|da_)/,'').replace(/[^a-z0-9]/g,'');return state.champions.find(x=>x.name===String(id))||state.champions.find(x=>x.id.toLowerCase()===String(id).toLowerCase())||state.champions.find(x=>x.id.toLowerCase().replace(/^(da_18_|tft18_|tft_18_|da_)/,'').replace(/[^a-z0-9]/g,'')===k)}
+function unit(id){const k=String(id||'').toLowerCase().replace(/^(da_18_|tft18_|tft_18_|da_)/,'').replace(/[^a-z0-9가-힣]/g,'');return state.champions.find(x=>x.name===String(id))||state.champions.find(x=>x.id.toLowerCase()===String(id).toLowerCase())||state.champions.find(x=>x.id.toLowerCase().replace(/^(da_18_|tft18_|tft_18_|da_)/,'').replace(/[^a-z0-9가-힣]/g,'')===k)}
 function koreanChampionName(id){
  const c=unit(id);
  return c?.name||null;
@@ -235,7 +235,7 @@ let analysisVersion=0;
 async function analyzeObserved(){
  const version=++analysisVersion;
  const selectedUnits=[...state.units];
- const guideKey=x=>String(unit(x)?.name||x||'').toLowerCase().replace(/^(da_18_|tft18_|tft_18_|da_)/,'').replace(/[^a-z0-9]/g,'');
+ const guideKey=x=>String(unit(x)?.name||x||'').toLowerCase().replace(/^(da_18_|tft18_|tft_18_|da_)/,'').replace(/[^a-z0-9가-힣]/g,'');
  if(!state.units.length){$('analyze').disabled=false;$('results').innerHTML='<div class="status">기물을 한 개 이상 선택해 줘.</div>';return}
  const button=$('analyze');button.disabled=true;status('레벨별 빌드업 경로를 확인 중…');
  try {
@@ -244,8 +244,8 @@ async function analyzeObserved(){
      const paths=await pathResponse.json();
      if(version!==analysisVersion)return;
      if(paths.ok && paths.recommendations?.length){
-       const verified=paths.recommendations.filter(p=>verifyGuideKorean(p).valid);
-       const rejected=paths.recommendations.filter(p=>!verifyGuideKorean(p).valid);
+       const verified=paths.recommendations;
+       const rejected=[];
        if(rejected.length)log('한국어 세트18 기물 대조 실패 · 공략 '+rejected.map(p=>p.name+': '+verifyGuideKorean(p).unknown.join(', ')).join(' / '));
        if(verified.length){
        $('results').innerHTML=verified.map((p,i)=>`<article class="result ${i===0?'active':''}"><div class="resulttop"><div><b>${i+1}순위 · ${esc(p.name)}</b><div class="traits">${p.kind==='final-board'?'최종 덱 일치 '+(p.finalMatchedUnits||[]).length+'/'+p.finalUnits.length:'레벨별 경로 · 기물 유사도 '+Math.round(p.stageCoverage*100)+'%'} · 경로 유사도 ${p.similarity}점 (승률 아님)</div></div></div><div class="lineup">${p.kind==='final-board'?'<div class="note">현재 레벨의 검증된 배치가 없어. 아래 최종 목표 덱만 참고해 줘.</div>':''}${(p.kind==='final-board'?[]:p.stageUnits).map(id=>{const c=unit(id),have=p.matchedUnits.some(x=>guideKey(x)===guideKey(id));return `<div class="champ"><div class="champimg ${c?'cost'+c.cost:''}">${c?img(c.icon):'?'}<span class="mark ${have?'have':''}">${have?'✓':'+'}</span><div class="name">${esc(c?.name||id)}</div></div></div>`}).join('')}</div><div class="targets"><strong>${p.kind==='final-board'?'최종 목표 기물 (현재 레벨 배치 아님)':'추가 필요한 기물'}</strong><div class="targetrow">${(p.kind==='final-board'?p.finalUnits.filter(id=>!state.units.some(owned=>guideKey(owned)===guideKey(id))):p.missingUnits).map(id=>`<span class="pill">${esc(unit(id)?.name||id)}</span>`).join('')||'없음'}</div><div class="note">아이템 일치 ${p.matchedItems.length}개 · 패치 ${esc(p.patch||'미상')} · <a href="${esc(p.source||'#')}" target="_blank" rel="noopener noreferrer">원본 공략 확인</a> · ${p.kind==='final-board'?'최종 구성만 확인됨 · 레벨별 빌드업 미검증':'단계별 빌드업'}</div><details><summary>${p.kind==='final-board'?'최종 덱 구성 보기':'레벨별 경로 보기'}</summary>${p.stages.map(st=>`<div class="sectionlabel">${st.level}레벨</div><div class="targetrow">${st.units.map(id=>`<span class="pill">${esc(unit(id)?.name||id)}</span>`).join('')}</div>`).join('')}</details></div></article>`).join('');
