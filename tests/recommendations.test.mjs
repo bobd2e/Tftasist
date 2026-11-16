@@ -53,5 +53,6 @@ test('recommendations expose swap and bench candidates without duplicate ownersh
   assert.deepEqual(match.missingUnits, ['DA_18_B']);
   assert.equal(match.swapCount, 1);
   assert.equal(match.changeCost, 2);
+  assert.equal(match.acquisitionCount, 1);
   assert.equal(match.matchCount, 1);
 });
