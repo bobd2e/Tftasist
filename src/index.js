@@ -53,6 +53,7 @@ export default {
           input.units.some(id => typeof id !== 'string' || !/^[A-Za-z0-9_]{1,100}$/.test(id))) {
         return json({ ok: false, error: 'units must be an array of up to 30 champion IDs' }, 400);
       }
+      if (input.items !== undefined && (!Array.isArray(input.items) || input.items.length > 100 || input.items.some(id => typeof id !== 'string' || !/^[A-Za-z0-9_]{1,100}$/.test(id)))) return json({ok:false,error:'Invalid items'},400);
       try {
         const rows = await env.tft_meta_db.prepare(
           'SELECT p.placement, p.units_json, p.traits_json FROM participants p JOIN matches m ON m.match_id = p.match_id WHERE m.set_number = 18 ORDER BY m.played_at DESC LIMIT 2000'
@@ -62,7 +63,7 @@ export default {
         const analyzedParticipants = groups.reduce((sum, group) => sum + group.sampleSize, 0);
         return json({ ok: true, setNumber: 18, sampledParticipants: participants.length,
           analyzedParticipants, excludedParticipants: participants.length - analyzedParticipants,
-          recommendations: recommendCompositions(groups, input.units),
+          recommendations: recommendCompositions(groups, input.units, 5, input.items || []),
           note: 'Experimental feasibility matches from observed boards; not proven optimal.' });
       } catch { return json({ ok: false, error: 'Recommendation analysis failed' }, 500); }
     }
