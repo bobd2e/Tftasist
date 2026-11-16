@@ -157,7 +157,7 @@ async function fetchData(){
 
 function unit(id){return state.champions.find(x=>x.id.toLowerCase()===String(id).toLowerCase())}
 function item(id){return state.allItems.find(x=>x.id===id)}
-function toggle(type,id){analysisVersion++;$('analyze').disabled=false;const a=state[type];const idx=a.indexOf(id);if(idx>=0)a.splice(idx,1);else a.push(id);render();$('results').innerHTML='<div class="status">선택이 변경됐어. 분석하기를 눌러 줘.</div>'; }
+function toggle(type,id){analysisVersion++;$('analyze').disabled=false;const a=state[type];const key=String(id).toLowerCase();const idx=a.findIndex(x=>String(x).toLowerCase()===key);if(idx>=0)a.splice(idx,1);else a.push(type==='units'?(unit(id)?.id||id):id);render();$('results').innerHTML='<div class="status">선택이 변경됐어. 분석하기를 눌러 줘.</div>'; }
 function render(){
  $('ucount').textContent=state.units.length;$('icount').textContent=state.items.length;
  $('ownedUnits').innerHTML=state.units.map(id=>`<button class="chip" data-type="units" data-id="${esc(id)}">✓ ${esc(unit(id)?.name||id)} ×</button>`).join('')||'<small>선택한 기물 없음</small>';
