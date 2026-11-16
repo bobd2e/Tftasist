@@ -1,7 +1,19 @@
 {
-  "name": "tftasist",
-  "compatibility_date": "2026-11-15",
-  "assets": {
-    "directory": "./public"
-  }
+	"name": "tftasist",
+	"main": "src/index.js",
+	"compatibility_date": "2026-11-15",
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS",
+		"run_worker_first": [
+			"/api/*"
+		]
+	},
+	"d1_databases": [
+		{
+			"binding": "tft_meta_db",
+			"database_name": "tft-meta-db",
+			"database_id": "72d03b31-135e-4386-809b-d2d1cdc24575"
+		}
+	]
 }

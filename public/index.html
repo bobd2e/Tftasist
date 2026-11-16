@@ -25,18 +25,18 @@ input{background:#0f1521;border:1px solid #43506a;color:var(--text);border-radiu
 .note{font-size:12px;color:var(--muted);line-height:1.65}.status{font-size:12px;padding:9px;border-radius:8px;background:#222d40;margin:8px 0}
 .results{display:grid;gap:12px}.result{border:1px solid var(--line);border-radius:11px;padding:13px;background:#131b29}
 .result.active{border-color:#b18c50}.resulttop{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:10px}
-.lineup{display:flex;gap:7px;overflow-x:auto;padding-bottom:7px}.champ{flex:0 0 76px;min-width:76px;text-align:center}
+.lineup{display:flex;gap:9px;overflow-x:auto;padding:4px 0 10px;align-items:flex-start}.champ{display:flex;flex-direction:column;align-items:center;gap:4px;flex:0 0 76px;width:76px;min-width:76px;text-align:center}.under{width:76px;display:flex;gap:2px;justify-content:center;align-items:center}.under .slot{width:22px;height:22px;flex:none;border-radius:5px;background:#273248;border:1px solid #4b5872;font-size:12px;line-height:20px}
 .champimg{position:relative;width:76px;height:76px;border:2px solid #aaa;border-radius:5px;overflow:hidden;background:#263246}
 .champimg img{width:100%;height:100%;object-fit:cover}.champimg .name{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,#000e);font-size:11px;padding:12px 2px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mark{position:absolute;top:2px;right:3px;background:#b57928;color:white;border-radius:12px;min-width:17px;font-size:12px;font-weight:bold}
 .mark.have{background:#158765}.under{display:flex;justify-content:center;gap:2px;min-height:25px;margin-top:3px}.under img{width:22px;height:22px;border:1px solid #59657b;border-radius:3px}
 .targets{margin-top:12px;padding:11px;border-radius:9px;background:#202b3d}.targets strong{color:#f1c77f}
 .targetrow{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0}.targetrow button{font-size:12px;padding:4px 7px}
-.sectionlabel{color:#b8c5dc;font-size:12px;margin:10px 0 4px}
+.sectionlabel{color:#f1c77f;font-size:12px;margin:14px 0 6px;font-weight:700}.itemcategories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:9px 0}.itemcategories button{font-size:12px;padding:8px 5px}.itemgroup{margin-bottom:12px}.itemgroup .items{margin-top:6px}.item img{flex:none}.owneditem{display:inline-flex;align-items:center;gap:5px}.owneditem img{width:20px;height:20px;object-fit:contain}.result .targetrow .pill img{width:22px;height:22px;vertical-align:middle}.result .targets{clear:both}
 .hidden{display:none!important}.footer{font-size:12px;color:var(--muted);padding:15px 20px;text-align:center}
 @media(max-width:800px){main{grid-template-columns:1fr;padding:10px;gap:10px}.panel{padding:13px}.scroll{max-height:310px}header{padding:13px}.champ{flex-basis:72px;min-width:72px}.champimg{width:72px;height:72px}}
 </style></head><body>
-<header><div><h1>⚔ TFT BUILD ADVISOR</h1><small>Set 18 · 프로토타입 v3 · 데이터 연결 진단</small></div><span class="pill" id="sourceTag">Set 18</span></header>
+<header><div><h1>⚔ TFT BUILD ADVISOR</h1><small>Set 18 · 프로토타입 v3.2.2 · 데이터 연결 진단</small></div><span class="pill" id="sourceTag">Set 18</span></header>
 <main>
 <div class="stack">
 <section class="panel"><div class="row between"><h2>내 필드</h2><button id="clear" type="button">전체 초기화</button></div>
@@ -45,7 +45,7 @@ input{background:#0f1521;border:1px solid #43506a;color:var(--text);border-radiu
 <button class="primary" id="analyze" style="width:100%;margin-top:14px">분석하기</button></section>
 <section class="panel"><h2>필드자원선택</h2><div class="tabs"><button class="active" data-tab="units">기물 목록</button><button data-tab="items">아이템 목록</button></div>
 <input id="search" placeholder="기물 이름 또는 특성 검색" autocomplete="off">
-<div id="unitPicker" class="scroll"></div><div id="itemPicker" class="scroll hidden"></div>
+<div id="unitPicker" class="scroll"></div><div id="itemCategories" class="itemcategories hidden"><button data-item-category="0" class="active">조합 아이템</button><button data-item-category="1">상징</button><button data-item-category="2">유물</button><button data-item-category="3">찬란한 아이템</button></div><div id="itemPicker" class="scroll hidden"></div>
 <p class="note">기물과 아이템을 누르면 내 필드에 추가돼. 다시 누르면 제거돼. 검색 결과를 누르면 선택돼.</p></section>
 </div>
 <div class="stack">
@@ -57,7 +57,7 @@ input{background:#0f1521;border:1px solid #43506a;color:var(--text);border-radiu
 <pre id="diagnostics" style="white-space:pre-wrap;word-break:break-all;font-size:11px;background:#0b1220;padding:10px;border-radius:8px;max-height:180px;overflow:auto">진단 준비 중</pre>
 <button id="copyLog" type="button">진단 로그 복사</button>
 </details>
-<section class="panel"><div class="row between"><h2>추천 조합 · 탐색 로드맵</h2><span class="pill">시너지 기반 탐색</span></div>
+<section class="panel"><div class="row between"><h2>시너지 탐색 후보 · 메타 통계 미연결</h2><span class="pill">시너지 기반 탐색</span></div>
 <div class="note" style="margin-bottom:12px">실제 기물·특성으로 후보를 구성하는 <b>규칙 기반 시뮬레이션</b>이야. 메타 승률이나 덱 티어를 반영한 추천은 아직 아니며, 실전 중 직접적인 행동 지시 용도로 설계하지 않았어.</div>
 <div id="results" class="results"><div class="status">데이터를 불러오고 기물을 선택한 뒤 분석하기를 눌러 줘.</div></div>
 </section>
@@ -68,7 +68,7 @@ input{background:#0f1521;border:1px solid #43506a;color:var(--text);border-radiu
 'use strict';
 const DATA_URLS=['./tft-data.json','https://raw.communitydragon.org/latest/cdragon/tft/ko_kr.json','https://raw.communitydragon.org/pbe/cdragon/tft/ko_kr.json'];
 const logLines=[];function log(x){logLines.push(new Date().toLocaleTimeString('ko-KR')+' '+x);$('diagnostics').textContent=logLines.slice(-35).join('\n')}
-const state={units:[],items:[],champions:[],traits:[],allItems:[],tab:'units',ready:false,raw:null};
+const state={units:[],items:[],champions:[],traits:[],allItems:[],tab:'units',itemCategory:0,ready:false,raw:null};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function asset(path){if(!path)return '';let p=String(path).replace(/\\/g,'/').replace(/^\/+/,'').toLowerCase().replace(/\.(tex|dds)$/i,'.png');return 'https://raw.communitydragon.org/latest/game/'+p}
@@ -82,11 +82,52 @@ function normalize(raw){
  const seen=new Set();
  const champions=target.champions.filter(c=>c&&c.name&&Number.isInteger(c.cost)&&c.cost>=1&&c.cost<=5&&Array.isArray(c.traits)&&c.traits.length&&!c.isSpawn).filter(c=>{let id=c.apiName||c.name;if(seen.has(id))return false;seen.add(id);return true}).map(c=>({id:c.apiName||c.name,name:c.name,cost:c.cost,traits:c.traits,icon:c.squareIcon||c.icon||'',raw:c})).sort((a,b)=>a.cost-b.cost||a.name.localeCompare(b.name,'ko'));
  const traits=target.traits.filter(t=>t&&t.name).map(t=>({name:t.name,effects:t.effects||[],icon:t.icon||''}));
- const allItems=(Array.isArray(raw.items)?raw.items:[]).filter(i=>i&&i.name&&i.icon&&!i.isAugment&&!/template|null/i.test(i.apiName||'')).map(i=>({id:i.apiName||String(i.id),name:i.name,icon:i.icon,composition:i.composition||[],tags:i.tags||[]}));
- const ids=new Set((target.items||[]).map(String));
- // Set-scoped items when provided; also include common craftable items/components.
- const itemPool=allItems.filter(i=>ids.has(i.id)||ids.has(String(i.id))||i.composition.length||(/component|basic/i).test(i.tags.join(' ')));
- return {champions,traits,items:itemPool.length?itemPool:allItems};
+ // Set 18 only: shared evergreen items plus items explicitly listed by this set.
+ const rawItems=(Array.isArray(raw.items)?raw.items:[]).filter(i=>i&&i.name&&i.icon&&!i.isAugment);
+ const baseOrder=['B.F. 대검','곡궁','쇠사슬 조끼','음전자 망토','쓸데없이 큰 지팡이','여신의 눈물','거인의 허리띠','연습용 장갑','뒤집개','프라이팬'];
+ const baseNames=new Set(baseOrder);
+ const blocked=/수호령|보상|전리품|꾸러미|상자|구체|선택지|증강|토큰|모루|loot|orb|chest|reward|guardian|dummy|placeholder|template|null|encounter|consumable|augment|portal|anvil|itemremover|reforger/i;
+ const normalized=rawItems.map(i=>({id:String(i.apiName||i.id),name:i.name,icon:i.icon,composition:Array.isArray(i.composition)?i.composition:[],tags:Array.isArray(i.tags)?i.tags:[],raw:i}));
+ const componentIds=new Set(normalized.filter(i=>baseNames.has(i.name)).flatMap(i=>[i.id,String(i.raw.id)]));
+ const setItemIds=new Set((Array.isArray(target.items)?target.items:[]).flatMap(x=>typeof x==='object'&&x?[x.apiName,x.id]:[x]).filter(x=>x!=null).map(x=>String(x).toLowerCase()));
+ const traitNames=new Set(traits.map(t=>t.name));
+ const legacySet=/\b(?:set(?:0?[1-9]|1[0-7]|1[9-9])|tft(?:0?[1-9]|1[0-7]|1[9-9]))(?:[_\W]|$)/i;
+ function belongsToSet(i){
+   const meta=i.id+' '+i.tags.join(' ');
+   if(legacySet.test(meta))return false;
+   // The set roster is authoritative for set-specific items when it provides IDs.
+   if(setItemIds.has(i.id.toLowerCase())||setItemIds.has(String(i.raw.id).toLowerCase()))return true;
+   // Shared item families do not carry a set number in CommunityDragon.
+   if(baseNames.has(i.name))return true;
+   if(i.composition.length===2&&i.composition.every(x=>componentIds.has(String(x))))return true;
+   if(/상징$/.test(i.name))return traitNames.has(i.name.replace(/\s*상징$/,'').trim());
+   // Artifacts and radiant items are cross-set pools; only use standard shared IDs.
+   if(/artifact|ornn|radiant/i.test(meta)&&!/(set\d+|tft\d+)/i.test(meta))return true;
+   return false;
+ }
+ function category(i){
+   const n=i.name,meta=i.id+' '+i.tags.join(' ');
+   if(blocked.test(n+' '+i.id)||!belongsToSet(i))return -1;
+   if(baseNames.has(n))return 0;
+   if(/상징$/.test(n)||/emblem/i.test(meta))return 1;
+   if(/유물|artifact|ornn/i.test(n+' '+meta))return 2;
+   if(/찬란한|radiant/i.test(n+' '+meta))return 3;
+   if(i.composition.length===2&&i.composition.every(x=>componentIds.has(String(x))))return 0;
+   return -1;
+ }
+ const seenItems=new Set();
+ const itemPool=normalized.map(i=>({...i,category:category(i)})).filter(i=>i.category>=0).filter(i=>{const k=i.category+':'+i.name;if(seenItems.has(k))return false;seenItems.add(k);return true}).sort((a,b)=>{
+   if(a.category!==b.category)return a.category-b.category;
+   if(a.category===0){
+     const ai=baseOrder.indexOf(a.name),bi=baseOrder.indexOf(b.name);
+     if((ai>=0)!==(bi>=0))return ai>=0?-1:1;
+     if(ai>=0&&bi>=0)return ai-bi;
+   }
+   return a.name.localeCompare(b.name,'ko');
+ });
+ log('세트 18 아이템 참조 '+setItemIds.size+'개 / 필터 결과 '+JSON.stringify(itemPool.reduce((a,i)=>(a[i.category]=(a[i.category]||0)+1,a),{})));
+
+ return {champions,traits,items:itemPool};
 }
 function load(raw,origin){
  const d=normalize(raw);state.raw=raw;state.champions=d.champions;state.traits=d.traits;state.allItems=d.items;state.ready=true;
@@ -112,7 +153,7 @@ async function fetchData(){
 
 function unit(id){return state.champions.find(x=>x.id===id)}
 function item(id){return state.allItems.find(x=>x.id===id)}
-function toggle(type,id){const a=state[type];const idx=a.indexOf(id);if(idx>=0)a.splice(idx,1);else a.push(id);render();if(state.ready&&state.units.length)generate()}
+function toggle(type,id){const a=state[type];const idx=a.indexOf(id);if(idx>=0)a.splice(idx,1);else a.push(id);render();$('results').innerHTML='<div class="status">선택이 변경됐어. 분석하기를 눌러 줘.</div>'; }
 function render(){
  $('ucount').textContent=state.units.length;$('icount').textContent=state.items.length;
  $('ownedUnits').innerHTML=state.units.map(id=>`<button class="chip" data-type="units" data-id="${esc(id)}">✓ ${esc(unit(id)?.name||id)} ×</button>`).join('')||'<small>선택한 기물 없음</small>';
@@ -120,8 +161,11 @@ function render(){
  const q=$('search').value.trim().toLowerCase();
  const units=state.champions.filter(x=>(x.name+' '+x.traits.join(' ')).toLowerCase().includes(q));
  $('unitPicker').innerHTML=units.map(c=>`<button class="unit ${state.units.includes(c.id)?'selected':''}" data-type="units" data-id="${esc(c.id)}">${img(c.icon,'portrait cost'+c.cost)}<span class="grow"><b>${esc(c.name)}</b><div class="traits">${esc(c.cost+'코스트 · '+c.traits.join(' · '))}</div></span><span class="check">${state.units.includes(c.id)?'✓':'＋'}</span></button>`).join('')||'<p class="note">검색 결과 없음</p>';
- const its=state.allItems.filter(x=>x.name.toLowerCase().includes(q)).slice(0,180);
- $('itemPicker').innerHTML='<div class="items">'+its.map(i=>`<button class="item ${state.items.includes(i.id)?'selected':''}" data-type="items" data-id="${esc(i.id)}">${img(i.icon)}<span>${esc(i.name)}</span>${state.items.includes(i.id)?'<b class="check">✓</b>':''}</button>`).join('')+'</div>';
+ const categoryNames=['조합 아이템','상징','유물','찬란한 아이템'];
+ // Search always spans all categories, regardless of the active category tab.
+ const its=state.allItems.filter(x=>(q?x.name.toLowerCase().includes(q):x.category===state.itemCategory));
+ document.querySelectorAll('[data-item-category]').forEach(b=>b.classList.toggle('active',Number(b.dataset.itemCategory)===state.itemCategory));
+ $('itemPicker').innerHTML=categoryNames.map((name,k)=>{const group=its.filter(i=>i.category===k);return group.length?`<section class="itemgroup"><div class="sectionlabel">${name} · ${group.length}</div><div class="items">${group.map(i=>`<button class="item ${state.items.includes(i.id)?'selected':''}" data-type="items" data-id="${esc(i.id)}">${img(i.icon)}<span>${esc(i.name)}</span>${state.items.includes(i.id)?'<b class="check">✓</b>':''}</button>`).join('')}</div></section>`:''}).join('')||'<p class="note">검색 결과가 없어.</p>';
 }
 function traitCounts(ids){const counts={};for(const id of ids){const c=unit(id);if(!c)continue;for(const t of new Set(c.traits))counts[t]=(counts[t]||0)+1}return counts}
 function breakpoints(t){const tr=state.traits.find(x=>x.name===t);return (tr?.effects||[]).map(e=>Number(e.minUnits??e.minUnitsRequired??e.min??0)).filter(n=>n>0).sort((a,b)=>a-b)}
@@ -148,18 +192,42 @@ function generate(){
  $('results').innerHTML=candidates.slice(0,3).map((b,i)=>{
    const missing=b.ids.filter(id=>!state.units.includes(id));
    const traits=Object.entries(traitCounts(b.ids)).filter(([t,n])=>n>=2).sort((a,b)=>b[1]-a[1]).slice(0,5);
-   return `<article class="result ${i===0?'active':''}"><div class="resulttop"><div><b>${i+1}위 · ${esc(b.focus)} 중심 후보</b><div class="traits">${traits.map(([t,n])=>esc(t+' '+n)).join(' · ')}</div></div><span class="pill">보유 ${b.ids.length-missing.length}/${b.ids.length}</span></div>
-   <div class="lineup">${b.ids.map(id=>{const c=unit(id),have=state.units.includes(id);return `<div class="champ"><div class="champimg cost${c.cost}">${img(c.icon)}<span class="mark ${have?'have':''}">${have?'✓':'+'}</span><div class="name">${esc(c.name)}</div></div><div class="under"></div></div>`}).join('')}</div>
+   return `<article class="result ${i===0?'active':''}"><div class="resulttop"><div><b>후보 ${i+1} · ${esc(b.focus)} 중심 (통계 미연결)</b><div class="traits">${traits.map(([t,n])=>esc(t+' '+n)).join(' · ')}</div></div><span class="pill">보유 ${b.ids.length-missing.length}/${b.ids.length}</span></div>
+   <div class="lineup">${b.ids.map(id=>{const c=unit(id),have=state.units.includes(id);return `<div class="champ"><div class="champimg cost${c.cost}">${img(c.icon)}<span class="mark ${have?'have':''}">${have?'✓':'+'}</span><div class="name">${esc(c.name)}</div></div><div class="under" title="메타 아이템 데이터 연결 대기"><span class="slot">—</span><span class="slot">—</span><span class="slot">—</span></div></div>`}).join('')}</div>
+<div class="targets">
+  <strong>🎒 현재 보유 아이템</strong>
+  <div class="targetrow">
+    ${state.items.map(id => {
+      const it = item(id);
+      return it
+        ? `<span class="pill owneditem">${img(it.icon)} ${esc(it.name)}</span>`
+        : '';
+    }).join('') || '<span class="note">보유 아이템 없음</span>'}
+  </div>
+  <div class="note">
+    메타 아이템 데이터 연결 후 제작 가능 여부와 추가 필요 아이템을 표시할 예정이야.
+  </div>
+</div>
    <div class="targets"><strong>◎ 추가 확보 목표 · 기물 ${missing.length}종</strong><div class="targetrow">${missing.map(id=>`<button data-type="units" data-id="${esc(id)}">＋ ${esc(unit(id).name)} · ${unit(id).cost}코</button>`).join('')||'<span class="check">목표 기물 확보 완료</span>'}</div><div class="note">현재는 보유 기물 중심의 특성 조합 후보야. 아이템 배치·증강 추천·메타 승률은 검증된 외부 데이터 연결 전이라 표시하지 않아.</div></div></article>`
  }).join('')||'<div class="status">후보를 생성할 수 없어요.</div>';
 }
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-type][data-id]');if(btn){toggle(btn.dataset.type,btn.dataset.id);return}});
-document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));$('unitPicker').classList.toggle('hidden',state.tab!=='units');$('itemPicker').classList.toggle('hidden',state.tab!=='items');$('search').value='';$('search').placeholder=state.tab==='units'?'기물 이름 또는 특성 검색':'아이템 이름 검색';render()});
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));$('unitPicker').classList.toggle('hidden',state.tab!=='units');$('itemPicker').classList.toggle('hidden',state.tab!=='items');$('itemCategories').classList.toggle('hidden',state.tab!=='items');$('search').value='';$('search').placeholder=state.tab==='units'?'기물 이름 또는 특성 검색':'아이템 이름 검색';render()});
+document.querySelectorAll('[data-item-category]').forEach(b=>b.onclick=()=>{state.itemCategory=Number(b.dataset.itemCategory);render()});
 $('search').addEventListener('input',render);$('analyze').onclick=()=>state.ready?generate():status('먼저 데이터를 연결해 주세요.');
 $('clear').onclick=()=>{state.units=[];state.items=[];render();$('results').innerHTML='<div class="status">자원을 선택하고 분석하기를 눌러 줘.</div>'};
 $('retry').onclick=fetchData;
 $('import').onclick=()=>$('jsonFile').click();
 $('jsonFile').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{log('로컬 파일: '+f.name);load(JSON.parse(await f.text()),'직접 가져온 JSON')}catch(err){status('JSON 가져오기 실패: '+err.message);log('가져오기 실패: '+err.message)}};
-$('copyLog').onclick=()=>{const v=$('diagnostics').textContent;if(navigator.clipboard?.writeText){navigator.clipboard.writeText(v).then(()=>log('진단 로그 복사됨')).catch(()=>window.prompt('아래 로그를 복사해 줘',v))}else window.prompt('아래 로그를 복사해 줘',v)};
+$('copyLog').onclick=()=>{
+  const v=$('diagnostics').textContent;
+  if(navigator.clipboard?.writeText){
+    navigator.clipboard.writeText(v)
+      .then(()=>log('진단 로그 복사됨'))
+      .catch(()=>window.prompt('아래 로그를 복사해 줘',v));
+  }else{
+    window.prompt('아래 로그를 복사해 줘',v);
+  }
+};
 fetchData();
 </script></body></html>
