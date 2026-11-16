@@ -48,7 +48,7 @@ test('clicking analyze displays observed recommendations and normalized add butt
   assert.match(element('results').innerHTML, /수집 덱 후보 1/);
   assert.match(element('results').innerHTML, /data-id="DA_18_B"/);
   assert.ok(element('results').innerHTML.includes('보유 1/2'));
-  assert.match(element('status').textContent, /수집 경기 3명/);
+  assert.match(element('status').textContent, /수집 참가자 3명/);
   assert.equal(element('analyze').disabled, false);
 });
 
@@ -110,8 +110,8 @@ test('a second analysis request supersedes the first response', async () => {
     recommendations: [{ unitIds: ['DA_18_A'], matchedUnits: ['DA_18_A'], missingUnits: [],
       removeUnits: [], sampleSize: 1, averagePlacement: 1, matchCount: 1 }] }) });
   await first;
-  assert.match(element('status').textContent, /수집 경기 2명/);
-  assert.doesNotMatch(element('status').textContent, /수집 경기 1명/);
+  assert.match(element('status').textContent, /수집 참가자 2명/);
+  assert.doesNotMatch(element('status').textContent, /수집 참가자 1명/);
 });
 
 test('reloading champion data invalidates an in-flight recommendation', async () => {
