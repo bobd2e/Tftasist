@@ -1,3 +1,5 @@
+import { clusterCompositions } from './meta-analyzer.js';
+
 const json = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 
 async function riotGet(url, apiKey) {
@@ -14,7 +16,7 @@ async function riotGet(url, apiKey) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (!['/api/meta', '/api/matches', '/api/collect'].includes(url.pathname)) {
+    if (!['/api/meta', '/api/matches', '/api/collect', '/api/compositions'].includes(url.pathname)) {
       return env.ASSETS.fetch(request);
     }
 
@@ -27,6 +29,28 @@ export default {
       if (!env.tft_meta_db) return json({ ok: false, error: 'D1 binding missing' }, 500);
     } else if (request.method !== 'GET') {
       return json({ ok: false, error: 'GET required' }, 405);
+    }
+
+    // Read-only analytics: use previously collected D1 data; no Riot key required.
+    if (url.pathname === '/api/compositions') {
+      if (!env.tft_meta_db) return json({ ok: false, error: 'D1 binding missing' }, 500);
+      try {
+        const limit = Math.min(Math.max(Number.parseInt(url.searchParams.get('limit') ?? '500', 10) || 500, 1), 2000);
+        const rows = await env.tft_meta_db.prepare(
+          'SELECT p.placement, p.units_json, p.traits_json FROM participants p JOIN matches m ON m.match_id = p.match_id WHERE m.set_number = 18 ORDER BY m.played_at DESC LIMIT ?'
+        ).bind(limit).all();
+        const participants = rows.results ?? [];
+        return json({
+          ok: true,
+          source: 'Collected Riot Games match data',
+          setNumber: 18,
+          sampledParticipants: participants.length,
+          compositions: clusterCompositions(participants),
+          note: 'Experimental similarity groups; not validated meta recommendations.'
+        });
+      } catch (error) {
+        return json({ ok: false, error: 'Composition analysis failed' }, 500);
+      }
     }
 
     if (!env.RIOT_API_KEY) return json({ ok: false, error: 'Riot API key missing' }, 500);
