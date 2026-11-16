@@ -115,6 +115,7 @@ export function recommendCompositions(groups, ownedUnitIds, maxResults = 5) {
       const removeUnits = owned.filter(id => !targetSet.has(id));
       // One-for-one swaps first, then additional purchases or benching.
       const swapCount = Math.min(removeUnits.length, missingUnits.length);
+      const acquisitionCount = missingUnits.length;
       return {
         ...group,
         matchedUnits,
@@ -125,7 +126,8 @@ export function recommendCompositions(groups, ownedUnitIds, maxResults = 5) {
         missingCount: missingUnits.length,
         removeCount: removeUnits.length,
         swapCount,
-        // Each missing unit requires acquisition; extra current units may be benched.
+        acquisitionCount,
+        // Display-only roster difference; not an estimate of gold or reroll costs.
         changeCost: missingUnits.length + removeUnits.length,
         coverage: Number((matchedUnits.length / target.length).toFixed(3))
       };
