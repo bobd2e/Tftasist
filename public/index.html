@@ -153,7 +153,7 @@ async function fetchData(){
 
 function unit(id){return state.champions.find(x=>x.id.toLowerCase()===String(id).toLowerCase())}
 function item(id){return state.allItems.find(x=>x.id===id)}
-function toggle(type,id){const a=state[type];const idx=a.indexOf(id);if(idx>=0)a.splice(idx,1);else a.push(id);render();$('results').innerHTML='<div class="status">선택이 변경됐어. 분석하기를 눌러 줘.</div>'; }
+function toggle(type,id){analysisVersion++;$('analyze').disabled=false;const a=state[type];const idx=a.indexOf(id);if(idx>=0)a.splice(idx,1);else a.push(id);render();$('results').innerHTML='<div class="status">선택이 변경됐어. 분석하기를 눌러 줘.</div>'; }
 function render(){
  $('ucount').textContent=state.units.length;$('icount').textContent=state.items.length;
  $('ownedUnits').innerHTML=state.units.map(id=>`<button class="chip" data-type="units" data-id="${esc(id)}">✓ ${esc(unit(id)?.name||id)} ×</button>`).join('')||'<small>선택한 기물 없음</small>';
@@ -170,13 +170,17 @@ function render(){
 function traitCounts(ids){const counts={};for(const id of ids){const c=unit(id);if(!c)continue;for(const t of new Set(c.traits))counts[t]=(counts[t]||0)+1}return counts}
 function breakpoints(t){const tr=state.traits.find(x=>x.name===t);return (tr?.effects||[]).map(e=>Number(e.minUnits??e.minUnitsRequired??e.min??0)).filter(n=>n>0).sort((a,b)=>a-b)}
 function score(ids){const counts=traitCounts(ids);let value=0;for(const [t,n] of Object.entries(counts)){const breaks=breakpoints(t);if(breaks.length){const active=breaks.filter(k=>n>=k);value+=active.length*12+Math.min(n,breaks[0])*2}else if(n>=2)value+=8}value+=ids.filter(id=>state.units.includes(id)).length*9;return value}
+let analysisVersion=0;
 async function analyzeObserved(){
+ const version=++analysisVersion;
+ const selectedUnits=[...state.units];
  if(!state.units.length){$('results').innerHTML='<div class="status">기물을 한 개 이상 선택해 줘.</div>';return}
  const button=$('analyze');button.disabled=true;status('수집 경기 기반 추천을 계산 중…');
  try{
-  const response=await fetch('/api/recommend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({units:state.units})});
+  const response=await fetch('/api/recommend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({units:selectedUnits})});
   if(!response.ok)throw Error('추천 API HTTP '+response.status);
   const data=await response.json();
+  if(version!==analysisVersion)return;
   if(!data.ok||!Array.isArray(data.recommendations))throw Error('추천 응답 형식 오류');
   const cards=data.recommendations.filter(x=>Array.isArray(x.unitIds)&&x.unitIds.length);
   if(!cards.length){status('분석 가능한 수집 덱이 없어 시너지 탐색으로 전환했어.');generate();return}
@@ -186,11 +190,11 @@ async function analyzeObserved(){
     const champ=unit(id),have=matched.has(id.toLowerCase());
     return `<div class="champ"><div class="champimg ${champ?'cost'+champ.cost:''}">${champ?img(champ.icon):'<span>?</span>'}<span class="mark ${have?'have':''}">${have?'✓':'+'}</span><div class="name">${esc(champ?.name||id)}</div></div></div>`;
    }).join('');
-   return `<article class="result ${i===0?'active':''}"><div class="resulttop"><div><b>수집 덱 후보 ${i+1}</b><div class="traits">표본 ${Number(b.sampleSize)||0}명 · 평균 ${esc(b.averagePlacement)}등 · 통계 신뢰도 낮음 · 구성 유사도 기준</div></div><span class="pill">보유 ${Number(b.matchCount)||0}/${b.unitIds.length}</span></div><div class="lineup">${lineup}</div><div class="targets"><strong>추가 필요 · ${missing.length}종</strong><div class="targetrow">${missing.map(id=>`<button data-type="units" data-id="${esc(id)}">＋ ${esc(unit(id)?.name||id)}</button>`).join('')||'<span class="check">추가 필요 없음</span>'}</div><div class="note">교체·제외 후보: ${removed.map(id=>esc(unit(id)?.name||id)).join(', ')||'없음'} · 확보 필요 ${missing.length}종 · 골드·리롤 비용 미반영</div></div></article>`;
+   return `<article class="result ${i===0?'active':''}"><div class="resulttop"><div><b>수집 덱 후보 ${i+1}</b><div class="traits">표본 ${Number(b.sampleSize)||0}명 · 평균 ${esc(b.averagePlacement)}등 · 통계 신뢰도 낮음 · 구성 유사도 기준</div></div><span class="pill">보유 ${Number(b.matchCount)||0}/${b.unitIds.length}</span></div><div class="lineup">${lineup}</div><div class="targets"><strong>추가 필요 · ${missing.length}종</strong><div class="targetrow">${missing.map(id=>`<button data-type="units" data-id="${esc(unit(id)?.id||id)}">＋ ${esc(unit(id)?.name||id)}</button>`).join('')||'<span class="check">추가 필요 없음</span>'}</div><div class="note">교체·제외 후보: ${removed.map(id=>esc(unit(id)?.name||id)).join(', ')||'없음'} · 확보 필요 ${missing.length}종 · 골드·리롤 비용 미반영</div></div></article>`;
   }).join('');
   status('수집 경기 '+data.sampledParticipants+'명 기준 · 실험적 추천 · 결과는 검증된 메타 순위가 아니야.');
- }catch(error){log('추천 API 실패: '+error.message);status('추천 API 연결 실패 · 시너지 기반 탐색으로 전환했어.');generate()}
- finally{button.disabled=false}
+ }catch(error){if(version!==analysisVersion)return;log('추천 API 실패: '+error.message);status('추천 API 연결 실패 · 시너지 기반 탐색으로 전환했어.');generate()}
+ finally{if(version===analysisVersion)button.disabled=false}
 }
 function generate(){
  const owned=state.units.filter(id=>unit(id));if(!owned.length){$('results').innerHTML='<div class="status">기물을 한 개 이상 선택해 줘.</div>';return}
@@ -237,7 +241,7 @@ document.addEventListener('click',e=>{const btn=e.target.closest('[data-type][da
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));$('unitPicker').classList.toggle('hidden',state.tab!=='units');$('itemPicker').classList.toggle('hidden',state.tab!=='items');$('itemCategories').classList.toggle('hidden',state.tab!=='items');$('search').value='';$('search').placeholder=state.tab==='units'?'기물 이름 또는 특성 검색':'아이템 이름 검색';render()});
 document.querySelectorAll('[data-item-category]').forEach(b=>b.onclick=()=>{state.itemCategory=Number(b.dataset.itemCategory);render()});
 $('search').addEventListener('input',render);$('analyze').onclick=()=>state.ready?analyzeObserved():status('먼저 데이터를 연결해 주세요.');
-$('clear').onclick=()=>{state.units=[];state.items=[];render();$('results').innerHTML='<div class="status">자원을 선택하고 분석하기를 눌러 줘.</div>'};
+$('clear').onclick=()=>{analysisVersion++;$('analyze').disabled=false;state.units=[];state.items=[];render();$('results').innerHTML='<div class="status">자원을 선택하고 분석하기를 눌러 줘.</div>'};
 $('retry').onclick=fetchData;
 $('import').onclick=()=>$('jsonFile').click();
 $('jsonFile').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{log('로컬 파일: '+f.name);load(JSON.parse(await f.text()),'직접 가져온 JSON')}catch(err){status('JSON 가져오기 실패: '+err.message);log('가져오기 실패: '+err.message)}};
