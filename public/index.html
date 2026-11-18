@@ -48,7 +48,7 @@ input{background:#0f1521;border:1px solid #43506a;color:var(--text);border-radiu
 <button class="primary" id="analyze" style="width:100%;margin-top:14px">분석하기</button></section>
 <section class="panel"><h2>필드자원선택</h2><div class="tabs"><button class="active" data-tab="units">기물 목록</button><button data-tab="items">아이템 목록</button></div>
 <input id="search" placeholder="기물 이름 또는 특성 검색" autocomplete="off">
-<div id="unitCosts" class="itemcategories"><button data-unit-cost="0" class="active">전체</button><button data-unit-cost="1">1코</button><button data-unit-cost="2">2코</button><button data-unit-cost="3">3코</button><button data-unit-cost="4">4코</button><button data-unit-cost="5">5코</button></div><div id="unitPicker" class="scroll"></div><div id="itemCategories" class="itemcategories hidden"><button data-item-category="0" class="active">조합 아이템</button><button data-item-category="1">상징</button><button data-item-category="2">유물</button><button data-item-category="3">찬란한 아이템</button></div><div id="itemPicker" class="scroll hidden"></div>
+<div id="unitCosts" class="itemcategories"><button data-unit-cost="1">1코</button><button data-unit-cost="2">2코</button><button data-unit-cost="3">3코</button><button data-unit-cost="4">4코</button><button data-unit-cost="5">5코</button></div><div id="unitPicker" class="scroll"></div><div id="itemCategories" class="itemcategories hidden"><button data-item-category="0" class="active">조합 아이템</button><button data-item-category="1">상징</button><button data-item-category="2">유물</button><button data-item-category="3">찬란한 아이템</button></div><div id="itemPicker" class="scroll hidden"></div>
 <p class="note">기물은 다시 누르면 제거돼. 아이템은 누를 때마다 1개씩 추가되고 내 필드에서 수량을 조절할 수 있어.</p></section>
 </div>
 <div class="stack">
@@ -71,7 +71,7 @@ input{background:#0f1521;border:1px solid #43506a;color:var(--text);border-radiu
 'use strict';
 const DATA_URLS=['./tft-data.json','https://raw.communitydragon.org/latest/cdragon/tft/ko_kr.json','https://raw.communitydragon.org/pbe/cdragon/tft/ko_kr.json'];
 const logLines=[];function log(x){logLines.push(new Date().toLocaleTimeString('ko-KR')+' '+x);$('diagnostics').textContent=logLines.slice(-35).join('\n')}
-const state={units:[],items:[],champions:[],traits:[],allItems:[],tab:'units',unitCost:0,itemCategory:0,ready:false,raw:null};
+const state={units:[],items:[],champions:[],traits:[],allItems:[],tab:'units',unitCost:1,itemCategory:0,ready:false,raw:null};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function asset(path){if(!path)return '';let p=String(path).replace(/\\/g,'/').replace(/^\/+/,'').toLowerCase().replace(/\.(tex|dds)$/i,'.png');return 'https://raw.communitydragon.org/latest/game/'+p}
@@ -176,7 +176,7 @@ function render(){
  $('ownedUnits').innerHTML=state.units.map(id=>`<button class="chip" data-type="units" data-id="${esc(id)}">✓ ${esc(unit(id)?.name||id)} ×</button>`).join('')||'<small>선택한 기물 없음</small>';
  $('ownedItems').innerHTML=[...new Set(state.items)].map(id=>`<span class="chip"><button type="button" data-item-delta="-1" data-id="${esc(id)}" aria-label="${esc(item(id)?.name||id)} 하나 제거">−</button> ${esc(item(id)?.name||id)} ×${state.items.filter(x=>x===id).length} <button type="button" data-item-delta="1" data-id="${esc(id)}" aria-label="${esc(item(id)?.name||id)} 하나 추가">＋</button></span>`).join('')||'<small>선택한 아이템 없음</small>';
  const q=$('search').value.trim().toLowerCase();
- const units=state.champions.filter(x=>(x.name+' '+x.traits.join(' ')).toLowerCase().includes(q) && (q || !state.unitCost || x.cost===state.unitCost));
+ const units=state.champions.filter(x=>(x.name+' '+x.traits.join(' ')).toLowerCase().includes(q) && (q || x.cost===state.unitCost));
  document.querySelectorAll('[data-unit-cost]').forEach(b=>b.classList.toggle('active',Number(b.dataset.unitCost)===state.unitCost));
  $('unitPicker').innerHTML=units.map(c=>`<button class="unit ${state.units.includes(c.id)?'selected':''}" data-type="units" data-id="${esc(c.id)}">${img(c.icon,'portrait cost'+c.cost)}<span class="grow"><b>${esc(c.name)}</b><div class="traits">${esc(c.cost+'코스트 · '+c.traits.join(' · '))}</div></span><span class="check">${state.units.includes(c.id)?'✓':'＋'}</span></button>`).join('')||'<p class="note">검색 결과 없음</p>';
  const categoryNames=['조합 아이템','상징','유물','찬란한 아이템'];
