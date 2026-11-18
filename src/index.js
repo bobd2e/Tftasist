@@ -1,3 +1,7 @@
+import { clusterCompositions, recommendCompositions } from './meta-analyzer.js';
+import { rankBuildPaths } from './build-paths.js';
+import { metaGuides } from './meta-guides.js';
+
 const json = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 
 async function riotGet(url, apiKey) {
@@ -14,7 +18,7 @@ async function riotGet(url, apiKey) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (!['/api/meta', '/api/matches', '/api/collect'].includes(url.pathname)) {
+    if (!['/api/meta', '/api/matches', '/api/collect', '/api/compositions', '/api/recommend', '/api/build-paths'].includes(url.pathname)) {
       return env.ASSETS.fetch(request);
     }
 
@@ -25,8 +29,70 @@ export default {
         return json({ ok: false, error: 'Unauthorized' }, 401);
       }
       if (!env.tft_meta_db) return json({ ok: false, error: 'D1 binding missing' }, 500);
-    } else if (request.method !== 'GET') {
-      return json({ ok: false, error: 'GET required' }, 405);
+    } else if (['/api/recommend', '/api/build-paths'].includes(url.pathname) ? request.method !== 'POST' : request.method !== 'GET') {
+      return json({ ok: false, error: ['/api/recommend', '/api/build-paths'].includes(url.pathname) ? 'POST required' : 'GET required' }, 405);
+    }
+
+    if (url.pathname === '/api/build-paths') {
+      let input;
+      try { input = await request.json(); } catch { return json({ok:false,error:'Invalid JSON body'},400); }
+      const validIds = xs => Array.isArray(xs) && xs.length <= 100 && xs.every(id => typeof id === 'string' && id.length <= 100 && /^[\p{L}\p{N}_ .:'’\-]+$/u.test(id));
+      if (!input || !validIds(input.units) || !validIds(input.items) || !Number.isInteger(input.level) || input.level < 3 || input.level > 10) {
+        return json({ok:false,error:'Expected units, items and level (3-10)'},400);
+      }
+      return json({ok:true,source:'Verified level-by-level guides',guideCount:metaGuides.length,
+        recommendations:rankBuildPaths(metaGuides,input),
+        note:metaGuides.length ? 'Route similarity, not win probability.' : 'No verified level-by-level guides registered yet; no route rankings invented.'});
+    }
+
+    if (url.pathname === '/api/recommend') {
+      if (!env.tft_meta_db) return json({ ok: false, error: 'D1 binding missing' }, 500);
+      let input;
+      try { input = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body' }, 400); }
+      if (!input || !Array.isArray(input.units) || input.units.length > 30 ||
+          input.units.some(id => typeof id !== 'string' || !/^[A-Za-z0-9_]{1,100}$/.test(id))) {
+        return json({ ok: false, error: 'units must be an array of up to 30 champion IDs' }, 400);
+      }
+      if (input.items !== undefined && (!Array.isArray(input.items) || input.items.length > 100 || input.items.some(id => typeof id !== 'string' || !/^[A-Za-z0-9_]{1,100}$/.test(id)))) return json({ok:false,error:'Invalid items'},400);
+      try {
+        const rows = await env.tft_meta_db.prepare(
+          'SELECT p.placement, p.units_json, p.traits_json FROM participants p JOIN matches m ON m.match_id = p.match_id WHERE m.set_number = 18 ORDER BY m.played_at DESC LIMIT 2000'
+        ).all();
+        const participants = rows.results ?? [];
+        const groups = clusterCompositions(participants);
+        const analyzedParticipants = groups.reduce((sum, group) => sum + group.sampleSize, 0);
+        return json({ ok: true, setNumber: 18, sampledParticipants: participants.length,
+          analyzedParticipants, excludedParticipants: participants.length - analyzedParticipants,
+          recommendations: recommendCompositions(groups, input.units, 5, input.items || []),
+          note: 'Experimental feasibility matches from observed boards; not proven optimal.' });
+      } catch { return json({ ok: false, error: 'Recommendation analysis failed' }, 500); }
+    }
+
+    // Read-only analytics: use previously collected D1 data; no Riot key required.
+    if (url.pathname === '/api/compositions') {
+      if (!env.tft_meta_db) return json({ ok: false, error: 'D1 binding missing' }, 500);
+      try {
+        const limit = Math.min(Math.max(Number.parseInt(url.searchParams.get('limit') ?? '500', 10) || 500, 1), 2000);
+        const rows = await env.tft_meta_db.prepare(
+          'SELECT p.placement, p.units_json, p.traits_json FROM participants p JOIN matches m ON m.match_id = p.match_id WHERE m.set_number = 18 ORDER BY m.played_at DESC LIMIT ?'
+        ).bind(limit).all();
+        const participants = rows.results ?? [];
+        const compositions = clusterCompositions(participants);
+        const analyzedParticipants = compositions.reduce((sum, group) => sum + group.sampleSize, 0);
+        return json({
+          ok: true,
+          source: 'Collected Riot Games match data',
+          setNumber: 18,
+          sampledParticipants: participants.length,
+          analyzedParticipants,
+          excludedParticipants: participants.length - analyzedParticipants,
+          groupCount: compositions.length,
+          compositions,
+          note: 'Experimental similarity groups; not validated meta recommendations.'
+        });
+      } catch (error) {
+        return json({ ok: false, error: 'Composition analysis failed' }, 500);
+      }
     }
 
     if (!env.RIOT_API_KEY) return json({ ok: false, error: 'Riot API key missing' }, 500);
