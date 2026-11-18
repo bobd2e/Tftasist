@@ -7,7 +7,8 @@ const script=html.slice(html.indexOf('<script>')+8,html.indexOf('</script>'));
 test('inline frontend JavaScript parses after level-picker refactor',()=>{assert.doesNotThrow(()=>new Script(script));});
 test('cost tabs replace global level selector',()=>{
  assert.doesNotMatch(html,/id="playerLevel"/);
- for(let cost=0;cost<=5;cost++)assert.match(html,new RegExp('data-unit-cost="'+cost+'"'));
+ assert.doesNotMatch(html,/data-unit-cost="0"/);
+ for(let cost=1;cost<=5;cost++)assert.match(html,new RegExp('data-unit-cost="'+cost+'"'));
  assert.match(script,/state\.unitCost/);
  assert.match(script,/x\.cost===state\.unitCost/);
 });
